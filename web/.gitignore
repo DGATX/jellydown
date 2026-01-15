@@ -4,10 +4,12 @@ node_modules/
 # Build output
 dist/
 
-# Runtime directories
+# Temp and data directories
 temp/
 downloads/
 data/
+
+# Session files
 sessions/
 
 # Environment
@@ -33,3 +35,4 @@ npm-debug.log*
 
 # TypeScript cache
 *.tsbuildinfo
+cookies.txt

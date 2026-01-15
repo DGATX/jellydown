@@ -1,0 +1,10 @@
+services:
+  jellydown:
+    image: dgatx/jellydown:latest
+    ports:
+      - "6942:6942"
+    volumes:
+      - ./downloads:/app/downloads
+      - ./data:/app/data
+      - ./temp:/app/temp
+    restart: unless-stopped

@@ -1,0 +1,134 @@
+import express from 'express';
+import session from 'express-session';
+import FileStoreFactory from 'session-file-store';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import path from 'path';
+import { createServer } from 'http';
+import winston from 'winston';
+
+import { config } from './config';
+import { errorHandler } from './middleware/error.middleware';
+import { setupWebSocket } from './websocket/progress';
+import { downloadService } from './services/download.service';
+
+const FileStore = FileStoreFactory(session);
+
+import authRoutes from './routes/auth.routes';
+import libraryRoutes from './routes/library.routes';
+import downloadRoutes from './routes/download.routes';
+import settingsRoutes from './routes/settings.routes';
+import { settingsService } from './services/settings.service';
+
+// Logger setup - exported for use in other modules
+export const logger = winston.createLogger({
+  level: config.nodeEnv === 'development' ? 'debug' : 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.colorize(),
+    winston.format.printf(({ timestamp, level, message }) => {
+      return `${timestamp} ${level}: ${message}`;
+    })
+  ),
+  transports: [new winston.transports.Console()]
+});
+
+// Create Express app
+const app = express();
+const server = createServer(app);
+
+// Trust proxy (for nginx)
+app.set('trust proxy', 1);
+
+// Middleware
+app.use(cors({
+  origin: config.nodeEnv === 'development' ? true : undefined,
+  credentials: true
+}));
+app.use(express.json());
+app.use(cookieParser());
+
+// Session configuration with file-based store for persistence across restarts
+const sessionDir = path.join(config.tempDir, 'sessions');
+app.use(session({
+  store: new FileStore({
+    path: sessionDir,
+    ttl: config.sessionMaxAgeMs / 1000, // TTL in seconds
+    retries: 0,
+    logFn: () => {} // Silence file-store logs
+  }),
+  secret: config.sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: config.nodeEnv === 'production',
+    httpOnly: true,
+    maxAge: config.sessionMaxAgeMs,
+    sameSite: 'lax'
+  }
+}));
+
+// Serve static files from client directory
+app.use(express.static(path.join(__dirname, '..', 'client')));
+
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/library', libraryRoutes);
+app.use('/api/download', downloadRoutes);
+app.use('/api/settings', settingsRoutes);
+
+// Health check
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', version: config.appVersion });
+});
+
+// Serve index.html for all other routes (SPA)
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'client', 'index.html'));
+});
+
+// Error handler
+app.use(errorHandler);
+
+// Setup WebSocket
+setupWebSocket(server);
+
+// Cleanup stale downloads periodically
+setInterval(() => {
+  downloadService.cleanupStaleSessions();
+}, 5 * 60 * 1000); // Every 5 minutes
+
+// Initialize settings and start server
+(async () => {
+  try {
+    await settingsService.load();
+    logger.info(`Settings loaded (maxConcurrentDownloads: ${settingsService.get('maxConcurrentDownloads')})`);
+  } catch (err) {
+    logger.warn('Failed to load settings, using defaults');
+  }
+
+  server.listen(config.port, () => {
+    logger.info(`Jellyfin Web Downloader running on port ${config.port}`);
+    logger.info(`Environment: ${config.nodeEnv}`);
+    if (config.nodeEnv === 'development') {
+      logger.info(`Open http://localhost:${config.port} in your browser`);
+    }
+  });
+})();
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    logger.info('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  server.close(() => {
+    logger.info('Server closed');
+    process.exit(0);
+  });
+});
