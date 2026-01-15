@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JellyDown - Video Downloader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <!-- Film grain overlay -->
+  <div class="grain-overlay"></div>
+
+  <!-- Ambient glow -->
+  <div class="ambient-glow"></div>
+
+  <div id="app">
+    <!-- Connection Screen -->
+    <section id="connect-screen" class="screen active">
+      <div class="screen-content">
+        <div class="logo-container">
+          <div class="logo-icon">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="4" y="8" width="40" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
+              <circle cx="12" cy="14" r="2" fill="currentColor"/>
+              <circle cx="12" cy="34" r="2" fill="currentColor"/>
+              <circle cx="36" cy="14" r="2" fill="currentColor"/>
+              <circle cx="36" cy="34" r="2" fill="currentColor"/>
+              <path d="M20 18L32 24L20 30V18Z" fill="currentColor"/>
+            </svg>
+          </div>
+          <h1 class="logo-text">JellyDown</h1>
+          <p class="logo-tagline">Transcoded Downloads for Jellyfin</p>
+        </div>
+
+        <form id="connect-form" class="form-card">
+          <div class="form-group">
+            <label for="server-url">Server URL</label>
+            <input
+              type="url"
+              id="server-url"
+              placeholder="https://jellyfin.example.com"
+              autocomplete="url"
+              required
+            >
+            <span class="input-hint">Enter your Jellyfin server address</span>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <span class="btn-text">Connect</span>
+            <span class="btn-loader"></span>
+          </button>
+        </form>
+
+        <div id="connect-error" class="error-message"></div>
+
+        <div id="recent-servers" class="recent-servers" style="display: none;">
+          <h3 class="recent-servers-title">Recent Servers</h3>
+          <div id="recent-servers-list" class="recent-servers-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Login Screen -->
+    <section id="login-screen" class="screen">
+      <div class="screen-content">
+        <button id="back-to-connect" class="back-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+          </svg>
+          <span>Back</span>
+        </button>
+
+        <div class="server-badge" id="server-badge">
+          <span class="server-name"></span>
+        </div>
+
+        <h2 class="screen-title">Sign In</h2>
+
+        <form id="login-form" class="form-card">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              autocomplete="username"
+              required
+            >
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              autocomplete="current-password"
+            >
+            <span class="input-hint">Leave empty if no password set</span>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            <span class="btn-text">Sign In</span>
+            <span class="btn-loader"></span>
+          </button>
+        </form>
+
+        <div id="login-error" class="error-message"></div>
+      </div>
+    </section>
+
+    <!-- Library Screen -->
+    <section id="library-screen" class="screen">
+      <header class="library-header">
+        <div class="header-left">
+          <div class="logo-small">
+            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="4" y="8" width="40" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
+              <circle cx="12" cy="14" r="2" fill="currentColor"/>
+              <circle cx="12" cy="34" r="2" fill="currentColor"/>
+              <circle cx="36" cy="14" r="2" fill="currentColor"/>
+              <circle cx="36" cy="34" r="2" fill="currentColor"/>
+              <path d="M20 18L32 24L20 30V18Z" fill="currentColor"/>
+            </svg>
+          </div>
+        </div>
+
+        <nav class="library-nav" id="library-nav">
+          <!-- Populated by JS -->
+        </nav>
+
+        <div class="header-right">
+          <button id="downloads-btn" class="icon-btn downloads-btn" title="Downloads">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7,10 12,15 17,10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span class="download-badge" id="download-badge" style="display: none;">0</span>
+          </button>
+          <button id="settings-btn" class="icon-btn" title="Settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+          <button id="logout-btn" class="icon-btn" title="Sign Out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16,17 21,12 16,7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="library-content">
+        <div class="library-toolbar">
+          <div class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="M21 21l-4.35-4.35"/>
+            </svg>
+            <input type="text" id="search-input" placeholder="Search movies...">
+          </div>
+        </div>
+
+        <div id="movies-grid" class="movies-grid">
+          <!-- Populated by JS -->
+        </div>
+
+        <div id="cache-grid" class="cache-grid" style="display: none;">
+          <!-- Populated by JS -->
+        </div>
+
+        <div id="loading-more" class="loading-more">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Downloads Panel -->
+  <div id="downloads-panel" class="downloads-panel">
+    <div class="downloads-panel-header">
+      <h2>Downloads</h2>
+      <button id="close-downloads" class="icon-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="downloads-list" id="downloads-list">
+      <div class="downloads-empty" id="downloads-empty">
+        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M32 12v28M20 28l12 12 12-12"/>
+          <path d="M12 44h40v8H12z"/>
+        </svg>
+        <p>No active downloads</p>
+        <span>Select a movie and click Download to start</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Movie Detail Modal -->
+  <div id="movie-modal" class="modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <button class="modal-close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+
+      <div class="modal-backdrop-image" id="modal-backdrop"></div>
+
+      <div class="modal-body">
+        <div class="movie-poster" id="modal-poster"></div>
+
+        <div class="movie-info">
+          <h2 class="movie-title" id="modal-title"></h2>
+
+          <div class="movie-meta" id="modal-meta">
+            <!-- Year, Runtime, Rating -->
+          </div>
+
+          <p class="movie-overview" id="modal-overview"></p>
+
+          <div class="movie-technical" id="modal-technical">
+            <!-- Source info -->
+          </div>
+
+          <!-- Series Browser (for TV shows) -->
+          <div class="series-browser" id="series-browser" style="display: none;">
+            <div class="series-breadcrumb" id="series-breadcrumb"></div>
+            <div class="series-list" id="series-list">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Download Options (for movies/episodes) -->
+          <div class="download-options" id="download-options">
+            <button class="back-to-series-btn" id="back-to-series" style="display: none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+              </svg>
+              <span>Back to episodes</span>
+            </button>
+            <h3>Download Quality</h3>
+            <div class="quality-presets" id="quality-presets">
+              <!-- Populated by JS -->
+            </div>
+
+            <div class="audio-select" id="audio-select-container" style="display: none;">
+              <h3>Audio Track</h3>
+              <select id="audio-select"></select>
+            </div>
+
+            <div class="download-estimate" id="download-estimate"></div>
+
+            <button id="start-download" class="btn btn-primary btn-large">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7,10 12,15 17,10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              <span>Download</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Download Progress Overlay -->
+  <div id="download-overlay" class="download-overlay">
+    <div class="download-card">
+      <div class="download-icon">
+        <svg viewBox="0 0 64 64" fill="none">
+          <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="2" opacity="0.2"/>
+          <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="2"
+                  stroke-dasharray="176" stroke-dashoffset="176"
+                  id="progress-circle" class="progress-circle"/>
+          <path d="M32 20v16M24 32l8 8 8-8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+
+      <h3 class="download-title" id="download-title">Preparing Download...</h3>
+      <p class="download-status" id="download-status">Initializing transcoding</p>
+
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+
+      <div class="progress-stats">
+        <span id="progress-percent">0%</span>
+        <span id="progress-segments">0 / 0 segments</span>
+      </div>
+
+      <button id="cancel-download" class="btn btn-ghost">Cancel Download</button>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal" class="modal">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content settings-modal-content">
+      <button class="modal-close" id="close-settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+
+      <h2 class="settings-title">Settings</h2>
+
+      <div class="settings-group">
+        <label class="settings-label" for="max-concurrent">
+          Max Concurrent Downloads
+          <span class="settings-hint">Number of downloads that can run simultaneously (1-20)</span>
+        </label>
+        <input type="number" id="max-concurrent" class="settings-input" min="1" max="20" value="5">
+      </div>
+
+      <div class="settings-actions">
+        <button id="save-settings" class="btn btn-primary">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script>console.log('[JellyDown] Scripts loading...');</script>
+  <script src="/js/api.js?v=9"></script>
+  <script src="/js/download.js?v=9"></script>
+  <script src="/js/app.js?v=9"></script>
+  <script>
+    console.log('[JellyDown] All scripts loaded');
+    console.log('[JellyDown] window.api:', typeof window.api);
+    console.log('[JellyDown] window.downloadManager:', typeof window.downloadManager);
+    console.log('[JellyDown] start-download button:', document.getElementById('start-download'));
+  </script>
+</body>
+</html>
