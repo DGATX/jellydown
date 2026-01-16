@@ -6,18 +6,43 @@ import { DownloadProgress } from '../models/types';
 interface ClientConnection {
   ws: WebSocket;
   subscriptions: Map<string, () => void>; // sessionId -> unsubscribe function
+  isAlive: boolean;
 }
 
 export function setupWebSocket(server: Server): WebSocketServer {
   const wss = new WebSocketServer({ server, path: '/ws' });
   const clients: Set<ClientConnection> = new Set();
 
+  // Server-side ping interval to keep connections alive through reverse proxies
+  // Most proxies timeout idle connections after 60-120 seconds
+  const pingInterval = setInterval(() => {
+    clients.forEach((client) => {
+      if (!client.isAlive) {
+        // Connection didn't respond to last ping, terminate it
+        client.ws.terminate();
+        return;
+      }
+      client.isAlive = false;
+      client.ws.ping();
+    });
+  }, 30000); // Ping every 30 seconds
+
+  wss.on('close', () => {
+    clearInterval(pingInterval);
+  });
+
   wss.on('connection', (ws: WebSocket) => {
     const client: ClientConnection = {
       ws,
-      subscriptions: new Map()
+      subscriptions: new Map(),
+      isAlive: true
     };
     clients.add(client);
+
+    // Handle pong responses (connection is alive)
+    ws.on('pong', () => {
+      client.isAlive = true;
+    });
 
     ws.on('message', (data: Buffer) => {
       try {

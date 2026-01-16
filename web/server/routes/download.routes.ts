@@ -720,6 +720,10 @@ router.get('/cache/:id/stream', async (req: Request, res: Response, next: NextFu
 
     const filePath = path.join(dirPath, mp4File);
 
+    // Headers for reverse proxy compatibility
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering for large files
+    res.setHeader('Cache-Control', 'no-cache'); // Don't cache streaming content
+
     res.sendFile(filePath, {
       headers: {
         'Content-Type': 'video/mp4',

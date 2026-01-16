@@ -19,6 +19,9 @@ export const config = {
   // Session settings
   sessionMaxAgeMs: parseInt(process.env.SESSION_MAX_AGE_MS || '86400000', 10), // 24 hours
 
+  // Reverse proxy settings
+  trustProxy: process.env.TRUST_PROXY || 'true', // Trust X-Forwarded-* headers (true, false, or number of hops)
+
   // App info for Jellyfin auth header
   appName: 'JellyfinWebDownloader',
   appVersion: '1.0.0'

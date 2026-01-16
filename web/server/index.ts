@@ -37,8 +37,17 @@ export const logger = winston.createLogger({
 const app = express();
 const server = createServer(app);
 
-// Trust proxy (for nginx)
-app.set('trust proxy', 1);
+// Trust proxy configuration for reverse proxies (nginx, traefik, caddy, etc.)
+// Parses X-Forwarded-* headers for proper client IP, protocol detection
+const trustProxySetting = config.trustProxy;
+if (trustProxySetting === 'true') {
+  app.set('trust proxy', true);
+} else if (trustProxySetting === 'false') {
+  app.set('trust proxy', false);
+} else {
+  // Numeric value for number of proxy hops
+  app.set('trust proxy', parseInt(trustProxySetting, 10) || true);
+}
 
 // Middleware
 app.use(cors({
@@ -61,11 +70,14 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: config.nodeEnv === 'production',
+    // Use req.secure which respects X-Forwarded-Proto when trust proxy is enabled
+    secure: 'auto',
     httpOnly: true,
     maxAge: config.sessionMaxAgeMs,
     sameSite: 'lax'
-  }
+  },
+  // Dynamically set secure cookie based on request protocol (handles reverse proxy HTTPS termination)
+  proxy: true
 }));
 
 // Serve static files from client directory

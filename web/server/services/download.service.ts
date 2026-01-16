@@ -693,6 +693,10 @@ export class DownloadService {
       throw new Error('Final file not found');
     }
 
+    // Headers for reverse proxy compatibility
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering for large files
+    res.setHeader('Cache-Control', 'no-cache'); // Don't cache streaming content
+
     return new Promise((resolve, reject) => {
       res.sendFile(session.finalPath!, {
         headers: {
