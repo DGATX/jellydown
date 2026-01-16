@@ -8,6 +8,16 @@ export interface SessionData {
   username: string;
 }
 
+// Saved server configuration
+export interface SavedServer {
+  id: string;
+  name: string;
+  serverUrl: string;
+  username: string;
+  // Note: We don't store passwords - user must re-authenticate
+  lastUsed?: Date;
+}
+
 // Jellyfin API types
 export interface PublicServerInfo {
   ServerName: string;
@@ -122,6 +132,12 @@ export interface TranscodeSettings {
   audioChannels: number;
 }
 
+// Custom preset with id and name for user-editable presets
+export interface CustomPreset extends TranscodeSettings {
+  id: string;
+  name: string;
+}
+
 export const TRANSCODE_PRESETS: Record<string, TranscodeSettings> = {
   low: {
     maxWidth: 854,
@@ -223,6 +239,20 @@ export interface DownloadSession {
   queuePosition?: number;  // Position in queue (1-based, undefined if active)
   queuedAt?: Date;         // When added to queue
   pausedAt?: Date;         // When paused
+  // Speed & ETA tracking
+  bytesDownloaded: number; // Total bytes downloaded so far
+  downloadStartedAt?: Date; // When downloading actually started
+  // Soft subtitles (muxed after download instead of burned)
+  softSubtitle?: {
+    streamIndex: number;
+    language?: string;
+    codec?: string;
+    jellyfinUrl: string;   // Base Jellyfin server URL
+    accessToken: string;   // Jellyfin access token for fetching subtitle
+  };
+  // Retry support
+  retryCount?: number;     // Number of times this download has been retried
+  lastError?: string;      // Last error message before retry
 }
 
 export interface DownloadProgress {
@@ -239,11 +269,26 @@ export interface DownloadProgress {
   canResume?: boolean;
   // Queue support
   queuePosition?: number;
+  // Speed & ETA tracking
+  bytesDownloaded?: number;
+  downloadStartedAt?: Date;
 }
 
 // App settings
 export interface AppSettings {
   maxConcurrentDownloads: number;
+  downloadsDir: string;
+  presets: CustomPreset[];
+  savedServers: SavedServer[];
+  defaultRetentionDays: number | null;  // null = forever, 1-365 = days to keep
+}
+
+// File retention metadata stored per-download
+export interface FileRetentionMeta {
+  sessionId: string;
+  retentionDays: number | null;  // null = use global default
+  downloadedAt: string;          // ISO date string
+  expiresAt: string | null;      // ISO date string, null = forever
 }
 
 // State file for resume capability
@@ -263,6 +308,36 @@ export interface DownloadState {
   transcodeSettings: TranscodeSettings;
   createdAt: string;
   updatedAt: string;
+}
+
+// Batch download types
+export interface BatchDownloadItem {
+  itemId: string;
+  mediaSourceId?: string;
+}
+
+export interface BatchDownloadRequest {
+  items: BatchDownloadItem[];
+  preset: string;
+  audioStreamIndex?: number;
+  subtitleStreamIndex?: number;
+}
+
+export interface BatchDownloadResult {
+  itemId: string;
+  sessionId?: string;
+  filename?: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface BatchCancelRequest {
+  itemIds: string[];
+}
+
+export interface BatchCancelResult {
+  cancelled: number;
+  removed: number;
 }
 
 // Extend express-session

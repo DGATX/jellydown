@@ -56,7 +56,7 @@
         <div id="connect-error" class="error-message"></div>
 
         <div id="recent-servers" class="recent-servers" style="display: none;">
-          <h3 class="recent-servers-title">Recent Servers</h3>
+          <h3 class="recent-servers-title">Saved Servers</h3>
           <div id="recent-servers-list" class="recent-servers-list"></div>
         </div>
       </div>
@@ -111,16 +111,19 @@
     <section id="library-screen" class="screen">
       <header class="library-header">
         <div class="header-left">
-          <div class="logo-small">
-            <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="4" y="8" width="40" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
-              <circle cx="12" cy="14" r="2" fill="currentColor"/>
-              <circle cx="12" cy="34" r="2" fill="currentColor"/>
-              <circle cx="36" cy="14" r="2" fill="currentColor"/>
-              <circle cx="36" cy="34" r="2" fill="currentColor"/>
-              <path d="M20 18L32 24L20 30V18Z" fill="currentColor"/>
-            </svg>
-          </div>
+          <a href="#" class="header-logo" id="header-logo-link">
+            <div class="logo-small">
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="4" y="8" width="40" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="14" r="2" fill="currentColor"/>
+                <circle cx="12" cy="34" r="2" fill="currentColor"/>
+                <circle cx="36" cy="14" r="2" fill="currentColor"/>
+                <circle cx="36" cy="34" r="2" fill="currentColor"/>
+                <path d="M20 18L32 24L20 30V18Z" fill="currentColor"/>
+              </svg>
+            </div>
+            <span class="header-logo-text">JellyDown</span>
+          </a>
         </div>
 
         <nav class="library-nav" id="library-nav">
@@ -128,7 +131,7 @@
         </nav>
 
         <div class="header-right">
-          <button id="downloads-btn" class="icon-btn downloads-btn" title="Downloads">
+          <button id="downloads-btn" class="icon-btn downloads-btn" title="Transcodes">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="7,10 12,15 17,10"/>
@@ -152,14 +155,31 @@
         </div>
       </header>
 
-      <div class="library-content">
+      <!-- Library Content (browsing movies) -->
+      <div id="library-content" class="library-content">
         <div class="library-toolbar">
           <div class="search-box">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"/>
               <path d="M21 21l-4.35-4.35"/>
             </svg>
-            <input type="text" id="search-input" placeholder="Search movies...">
+            <input type="text" id="search-input" placeholder="Search...">
+          </div>
+
+          <div class="sort-dropdown">
+            <label for="sort-select" class="sort-label">Sort:</label>
+            <select id="sort-select" class="sort-select">
+              <option value="SortName,Ascending">Name (A-Z)</option>
+              <option value="SortName,Descending">Name (Z-A)</option>
+              <option value="DateCreated,Descending">Date Added (Newest)</option>
+              <option value="DateCreated,Ascending">Date Added (Oldest)</option>
+              <option value="ProductionYear,Descending">Year (Newest)</option>
+              <option value="ProductionYear,Ascending">Year (Oldest)</option>
+              <option value="CommunityRating,Descending">Rating (Highest)</option>
+              <option value="CommunityRating,Ascending">Rating (Lowest)</option>
+              <option value="Runtime,Descending">Runtime (Longest)</option>
+              <option value="Runtime,Ascending">Runtime (Shortest)</option>
+            </select>
           </div>
         </div>
 
@@ -167,40 +187,279 @@
           <!-- Populated by JS -->
         </div>
 
-        <div id="cache-grid" class="cache-grid" style="display: none;">
-          <!-- Populated by JS -->
-        </div>
-
         <div id="loading-more" class="loading-more">
           <div class="spinner"></div>
         </div>
       </div>
+
+      <!-- Downloads Page -->
+      <div id="downloads-page" class="app-page">
+        <div class="page-header">
+          <button class="back-btn" id="downloads-back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            <span>Back</span>
+          </button>
+          <h1 class="page-title">Transcodes</h1>
+        </div>
+
+        <div class="page-tabs" id="downloads-page-tabs">
+          <button class="page-tab active" data-tab="active">Active</button>
+          <button class="page-tab" data-tab="completed">Completed</button>
+        </div>
+
+        <!-- Batch Actions Bar -->
+        <div class="batch-actions" id="batch-actions">
+          <button class="batch-btn" id="pause-all-btn" title="Pause all queued transcodes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <rect x="6" y="4" width="4" height="16"/>
+              <rect x="14" y="4" width="4" height="16"/>
+            </svg>
+            <span>Pause All</span>
+          </button>
+          <button class="batch-btn" id="resume-all-btn" title="Resume all paused transcodes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <polygon points="5,3 19,12 5,21"/>
+            </svg>
+            <span>Resume All</span>
+          </button>
+          <button class="batch-btn batch-btn-danger" id="clear-completed-btn" title="Clear completed and failed transcodes">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <polyline points="3,6 5,6 21,6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+            <span>Clear Completed</span>
+          </button>
+        </div>
+
+        <div id="downloads-active" class="tab-content active">
+          <div class="downloads-list" id="downloads-list">
+            <div class="downloads-empty" id="downloads-empty">
+              <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M32 12v28M20 28l12 12 12-12"/>
+                <path d="M12 44h40v8H12z"/>
+              </svg>
+              <p>No active transcodes</p>
+              <span>Select a movie and click Transcode to start</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="downloads-completed" class="tab-content">
+          <div id="cache-content">
+            <!-- Populated by JS - cached/completed files -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Page -->
+      <div id="settings-page" class="app-page">
+        <div class="page-header page-header-stacked">
+          <button class="back-btn" id="settings-back">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            <span>Back</span>
+          </button>
+          <h1 class="page-title">Settings</h1>
+        </div>
+
+        <div class="settings-form">
+          <div class="settings-group">
+            <label class="settings-label">
+              Theme
+              <span class="settings-hint">Choose your preferred appearance</span>
+            </label>
+            <div class="theme-toggle" id="theme-toggle">
+              <button class="theme-btn" data-theme="system" title="Follow system preference">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                  <rect x="2" y="3" width="20" height="14" rx="2"/>
+                  <line x1="8" y1="21" x2="16" y2="21"/>
+                  <line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+                <span>System</span>
+              </button>
+              <button class="theme-btn" data-theme="dark" title="Dark theme">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+                <span>Dark</span>
+              </button>
+              <button class="theme-btn" data-theme="light" title="Light theme">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                  <circle cx="12" cy="12" r="5"/>
+                  <line x1="12" y1="1" x2="12" y2="3"/>
+                  <line x1="12" y1="21" x2="12" y2="23"/>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                  <line x1="1" y1="12" x2="3" y2="12"/>
+                  <line x1="21" y1="12" x2="23" y2="12"/>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                <span>Light</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <label class="settings-label">
+              Poster Size
+              <span class="settings-hint">Adjust the size of movie and show posters</span>
+            </label>
+            <div class="size-toggle" id="size-toggle">
+              <button class="size-btn" data-size="small" title="Small posters">
+                <span>Small</span>
+              </button>
+              <button class="size-btn active" data-size="medium" title="Medium posters">
+                <span>Medium</span>
+              </button>
+              <button class="size-btn" data-size="large" title="Large posters">
+                <span>Large</span>
+              </button>
+              <button class="size-btn" data-size="xlarge" title="Extra large posters">
+                <span>X-Large</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <label class="settings-label" for="max-concurrent">
+              Max Concurrent Transcodes
+              <span class="settings-hint">Number of transcodes that can run simultaneously (1-20)</span>
+            </label>
+            <input type="number" id="max-concurrent" class="settings-input" min="1" max="20" value="5">
+          </div>
+
+          <div class="settings-group">
+            <label class="settings-label" for="downloads-dir">
+              Downloads Directory
+              <span class="settings-hint">Where completed downloads are saved</span>
+            </label>
+            <input type="text" id="downloads-dir" class="settings-input" placeholder="/path/to/downloads">
+          </div>
+
+          <div class="settings-group">
+            <label class="settings-label">
+              File Retention
+              <span class="settings-hint">How long to keep downloaded files before automatic deletion</span>
+            </label>
+            <div class="retention-input-group">
+              <select id="default-retention-type" class="settings-input retention-type-select">
+                <option value="forever">Keep Forever</option>
+                <option value="days">Delete After</option>
+              </select>
+              <input type="number" id="default-retention-days" class="settings-input retention-days-input" min="1" max="365" value="30">
+              <span id="retention-days-label" class="retention-label">days</span>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3 class="settings-section-title">Download Presets</h3>
+            <p class="settings-hint">Customize quality presets for downloads. You can add, edit, or remove presets.</p>
+
+            <div id="presets-list" class="presets-list">
+              <!-- Populated by JS -->
+            </div>
+
+            <button id="add-preset-btn" class="btn btn-secondary btn-small">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Add Preset
+            </button>
+          </div>
+
+          <!-- Preset Editor (inline, hidden by default via CSS) -->
+          <div id="preset-editor" class="preset-editor">
+            <h3 class="settings-section-title" id="preset-editor-title">Edit Preset</h3>
+
+            <div class="settings-group">
+              <label class="settings-label" for="preset-name">Name</label>
+              <input type="text" id="preset-name" class="settings-input" placeholder="e.g. Medium (720p)">
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label" for="preset-max-width">
+                Max Width (pixels)
+                <span class="settings-hint">480p=854, 720p=1280, 1080p=1920, 4K=3840</span>
+              </label>
+              <input type="number" id="preset-max-width" class="settings-input" min="320" max="7680" value="1920">
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label" for="preset-video-bitrate">
+                Video Bitrate (Mbps)
+                <span class="settings-hint">Higher = better quality but larger files</span>
+              </label>
+              <input type="number" id="preset-video-bitrate" class="settings-input" min="0.1" max="100" step="0.1" value="5">
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label" for="preset-audio-bitrate">
+                Audio Bitrate (kbps)
+                <span class="settings-hint">128-320 for stereo, higher for surround</span>
+              </label>
+              <input type="number" id="preset-audio-bitrate" class="settings-input" min="32" max="640" step="8" value="192">
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label" for="preset-audio-channels">Audio Channels</label>
+              <select id="preset-audio-channels" class="settings-input">
+                <option value="2">Stereo (2 channels)</option>
+                <option value="6">Surround (5.1 / 6 channels)</option>
+              </select>
+            </div>
+
+            <div class="settings-group">
+              <label class="settings-label" for="preset-video-codec">
+                Video Codec
+                <span class="settings-hint">HEVC offers ~50% smaller files but may not play on older devices</span>
+              </label>
+              <select id="preset-video-codec" class="settings-input">
+                <option value="h264">H.264 (AVC) - Universal compatibility</option>
+                <option value="hevc">H.265 (HEVC) - Smaller files, newer devices</option>
+              </select>
+            </div>
+
+            <div class="preset-editor-actions">
+              <button id="cancel-preset-edit" class="btn btn-secondary">Cancel</button>
+              <button id="save-preset" class="btn btn-primary">Save Preset</button>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3 class="settings-section-title">Server Information</h3>
+            <div id="server-info-container" class="server-info-container">
+              <div class="server-info-item">
+                <span class="server-info-label">Server Name</span>
+                <span id="server-info-name" class="server-info-value">--</span>
+              </div>
+              <div class="server-info-item">
+                <span class="server-info-label">Jellyfin Version</span>
+                <span id="server-info-version" class="server-info-value">--</span>
+              </div>
+              <div class="server-info-item">
+                <span class="server-info-label">Hardware Acceleration</span>
+                <span id="server-info-hwaccel" class="server-info-value">
+                  <span class="hwaccel-status" id="hwaccel-status">--</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div id="settings-save-success" class="save-success">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20,6 9,17 4,12"/>
+            </svg>
+            Settings saved successfully
+          </div>
+        </div>
+      </div>
     </section>
   </div>
-
-  <!-- Downloads Panel -->
-  <div id="downloads-panel" class="downloads-panel">
-    <div class="downloads-panel-header">
-      <h2>Downloads</h2>
-      <button id="close-downloads" class="icon-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-    </div>
-    <div class="downloads-list" id="downloads-list">
-      <div class="downloads-empty" id="downloads-empty">
-        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M32 12v28M20 28l12 12 12-12"/>
-          <path d="M12 44h40v8H12z"/>
-        </svg>
-        <p>No active downloads</p>
-        <span>Select a movie and click Download to start</span>
-      </div>
-    </div>
-  </div>
-
 
   <!-- Movie Detail Modal -->
   <div id="movie-modal" class="modal">
@@ -257,6 +516,31 @@
               <select id="audio-select"></select>
             </div>
 
+            <div class="subtitle-select" id="subtitle-select-container" style="display: none;">
+              <h3>Subtitles</h3>
+              <select id="subtitle-select">
+                <option value="-1">None</option>
+              </select>
+              <div class="subtitle-method-container" id="subtitle-method-container" style="display: none;">
+                <div class="subtitle-method-options">
+                  <label class="subtitle-method-option">
+                    <input type="radio" name="subtitle-method" value="burn" checked>
+                    <span class="subtitle-method-label">
+                      <span class="subtitle-method-title">Burn into video</span>
+                      <span class="subtitle-method-desc">Permanently embedded, always visible</span>
+                    </span>
+                  </label>
+                  <label class="subtitle-method-option">
+                    <input type="radio" name="subtitle-method" value="soft">
+                    <span class="subtitle-method-label">
+                      <span class="subtitle-method-title">Include as track (soft subs)</span>
+                      <span class="subtitle-method-desc">Can be toggled on/off in player</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <div class="download-estimate" id="download-estimate"></div>
 
             <button id="start-download" class="btn btn-primary btn-large">
@@ -265,7 +549,7 @@
                 <polyline points="7,10 12,15 17,10"/>
                 <line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
-              <span>Download</span>
+              <span>Transcode</span>
             </button>
           </div>
         </div>
@@ -302,37 +586,10 @@
     </div>
   </div>
 
-  <!-- Settings Modal -->
-  <div id="settings-modal" class="modal">
-    <div class="modal-backdrop"></div>
-    <div class="modal-content settings-modal-content">
-      <button class="modal-close" id="close-settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="6" x2="6" y2="18"/>
-          <line x1="6" y1="6" x2="18" y2="18"/>
-        </svg>
-      </button>
-
-      <h2 class="settings-title">Settings</h2>
-
-      <div class="settings-group">
-        <label class="settings-label" for="max-concurrent">
-          Max Concurrent Downloads
-          <span class="settings-hint">Number of downloads that can run simultaneously (1-20)</span>
-        </label>
-        <input type="number" id="max-concurrent" class="settings-input" min="1" max="20" value="5">
-      </div>
-
-      <div class="settings-actions">
-        <button id="save-settings" class="btn btn-primary">Save Settings</button>
-      </div>
-    </div>
-  </div>
-
   <script>console.log('[JellyDown] Scripts loading...');</script>
-  <script src="/js/api.js?v=9"></script>
-  <script src="/js/download.js?v=9"></script>
-  <script src="/js/app.js?v=9"></script>
+  <script src="/js/api.js?v=12"></script>
+  <script src="/js/download.js?v=12"></script>
+  <script src="/js/app.js?v=12"></script>
   <script>
     console.log('[JellyDown] All scripts loaded');
     console.log('[JellyDown] window.api:', typeof window.api);

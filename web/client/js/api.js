@@ -48,6 +48,27 @@ class JellyfinAPI {
     return this.request('GET', '/api/auth/session');
   }
 
+  async getSystemInfo() {
+    return this.request('GET', '/api/auth/system-info');
+  }
+
+  // Saved servers endpoints
+  async getSavedServers() {
+    return this.request('GET', '/api/auth/servers');
+  }
+
+  async saveServer(name, serverUrl, username) {
+    return this.request('POST', '/api/auth/servers', { name, serverUrl, username });
+  }
+
+  async removeServer(serverId) {
+    return this.request('DELETE', `/api/auth/servers/${serverId}`);
+  }
+
+  async loginToSavedServer(serverId, password) {
+    return this.request('POST', `/api/auth/servers/${serverId}/login`, { password });
+  }
+
   // Library endpoints
   async getLibraryViews() {
     return this.request('GET', '/api/library/views');
@@ -81,6 +102,11 @@ class JellyfinAPI {
     return this.request('GET', `/api/library/items?parentId=${seasonId}&includeItemTypes=Episode&sortBy=SortName&sortOrder=Ascending`);
   }
 
+  async getEpisodesFromSeries(seriesId) {
+    // Get episodes directly from series using Jellyfin's Shows API (for shows without seasons)
+    return this.request('GET', `/api/library/series/${seriesId}/episodes`);
+  }
+
   getImageUrl(itemId, type = 'Primary', maxWidth = 400) {
     return `/api/library/items/${itemId}/image?type=${type}&maxWidth=${maxWidth}`;
   }
@@ -94,14 +120,20 @@ class JellyfinAPI {
     return this.request('GET', '/api/download/list');
   }
 
-  async startDownload(itemId, mediaSourceId, preset, audioStreamIndex = 0) {
-    console.log('API.startDownload called:', { itemId, mediaSourceId, preset, audioStreamIndex });
-    const result = await this.request('POST', '/api/download/start', {
+  async startDownload(itemId, mediaSourceId, preset, audioStreamIndex = 0, subtitleStreamIndex = -1, subtitleMethod = 'burn') {
+    console.log('API.startDownload called:', { itemId, mediaSourceId, preset, audioStreamIndex, subtitleStreamIndex, subtitleMethod });
+    const body = {
       itemId,
       mediaSourceId,
       preset,
       audioStreamIndex
-    });
+    };
+    // Only include subtitle if a valid index is selected (>= 0)
+    if (subtitleStreamIndex >= 0) {
+      body.subtitleStreamIndex = subtitleStreamIndex;
+      body.subtitleMethod = subtitleMethod; // 'burn' or 'soft'
+    }
+    const result = await this.request('POST', '/api/download/start', body);
     console.log('API.startDownload response:', result);
     return result;
   }
@@ -122,6 +154,25 @@ class JellyfinAPI {
     return this.request('POST', `/api/download/${sessionId}/resume`);
   }
 
+  // Batch download - start multiple items at once
+  async startBatchDownload(items, preset, audioStreamIndex = 0, subtitleStreamIndex = -1) {
+    const body = {
+      items,
+      preset,
+      audioStreamIndex
+    };
+    // Only include subtitle if a valid index is selected (>= 0)
+    if (subtitleStreamIndex >= 0) {
+      body.subtitleStreamIndex = subtitleStreamIndex;
+    }
+    return this.request('POST', '/api/download/batch', body);
+  }
+
+  // Batch cancel - cancel/remove multiple downloads by item IDs
+  async cancelBatchDownloads(itemIds) {
+    return this.request('DELETE', '/api/download/batch', { itemIds });
+  }
+
   getStreamUrl(sessionId) {
     return `/api/download/stream/${sessionId}`;
   }
@@ -137,6 +188,10 @@ class JellyfinAPI {
 
   async deleteCached(id) {
     return this.request('DELETE', `/api/download/cache/${id}`);
+  }
+
+  async updateCachedRetention(id, retentionDays) {
+    return this.request('PATCH', `/api/download/cache/${id}/retention`, { retentionDays });
   }
 
   // Queue management endpoints
@@ -158,6 +213,19 @@ class JellyfinAPI {
 
   async getQueueInfo() {
     return this.request('GET', '/api/download/queue/info');
+  }
+
+  // Batch queue operations
+  async pauseAllDownloads() {
+    return this.request('POST', '/api/download/queue/pause-all');
+  }
+
+  async resumeAllDownloads() {
+    return this.request('POST', '/api/download/queue/resume-all');
+  }
+
+  async clearCompletedDownloads() {
+    return this.request('DELETE', '/api/download/queue/clear-completed');
   }
 
   // Settings endpoints

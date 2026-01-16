@@ -132,6 +132,29 @@ export class JellyfinService {
     return response.data;
   }
 
+  // Get all episodes for a series (using Jellyfin's Shows API)
+  async getSeriesEpisodes(seriesId: string): Promise<ItemsResult> {
+    if (!this.userId) throw new Error('Not authenticated');
+
+    const response = await this.client.get<ItemsResult>(
+      `/Shows/${seriesId}/Episodes`,
+      {
+        params: {
+          UserId: this.userId,
+          Fields: 'Overview,MediaSources,MediaStreams,Path,RunTimeTicks,PremiereDate,ProductionYear',
+          SortBy: 'SortName',
+          SortOrder: 'Ascending'
+        },
+        headers: {
+          'Authorization': this.buildAuthHeader(),
+          'X-Emby-Authorization': this.buildAuthHeader()
+        }
+      }
+    );
+
+    return response.data;
+  }
+
   // Get a single item's details
   async getItem(itemId: string): Promise<MediaItem> {
     if (!this.userId) throw new Error('Not authenticated');
@@ -190,6 +213,85 @@ export class JellyfinService {
       url += `?maxWidth=${maxWidth}`;
     }
     return url;
+  }
+
+  // Get system information including hardware acceleration status
+  async getSystemInfo(): Promise<{
+    serverName: string;
+    version: string;
+    hardwareAccelerationEnabled: boolean;
+    transcodingTempPath?: string;
+    encoderLocationType?: string;
+  }> {
+    try {
+      const authHeaders = {
+        'Authorization': this.buildAuthHeader(),
+        'X-Emby-Authorization': this.buildAuthHeader()
+      };
+
+      const response = await this.client.get('/System/Info', { headers: authHeaders });
+      const info = response.data;
+
+      // Try multiple endpoints to get encoding configuration
+      // /System/Configuration/encoding is the dedicated encoding config endpoint
+      // /System/Configuration contains EncodingOptions but requires admin
+      let encodingConfig: any = null;
+      let configSource = 'none';
+
+      // Try the dedicated encoding endpoint first (Jellyfin 10.8+)
+      try {
+        const encodingResponse = await this.client.get('/System/Configuration/encoding', { headers: authHeaders });
+        encodingConfig = encodingResponse.data;
+        configSource = 'encoding endpoint';
+        console.log('[Jellyfin] Got encoding config from /System/Configuration/encoding:', JSON.stringify(encodingConfig, null, 2));
+      } catch (err: any) {
+        console.log('[Jellyfin] /System/Configuration/encoding failed:', err.response?.status || err.message);
+        // Fall back to full configuration endpoint
+        try {
+          const configResponse = await this.client.get('/System/Configuration', { headers: authHeaders });
+          encodingConfig = configResponse.data?.EncodingOptions;
+          configSource = 'full config';
+          console.log('[Jellyfin] Got encoding config from /System/Configuration:', JSON.stringify(encodingConfig, null, 2));
+        } catch (err2: any) {
+          console.log('[Jellyfin] /System/Configuration failed:', err2.response?.status || err2.message);
+          // User may not have admin access - that's ok
+        }
+      }
+
+      // Check if hardware acceleration is enabled
+      let hardwareAccelerationEnabled = false;
+      let hwAccelType = 'software';
+
+      if (encodingConfig) {
+        // The field is HardwareAccelerationType in both endpoints
+        const accelType = encodingConfig.HardwareAccelerationType || encodingConfig.hardwareAccelerationType;
+        console.log('[Jellyfin] HardwareAccelerationType from', configSource, ':', accelType);
+        if (accelType && accelType.toLowerCase() !== 'none' && accelType !== '') {
+          hardwareAccelerationEnabled = true;
+          hwAccelType = accelType;
+        }
+      } else {
+        console.log('[Jellyfin] No encoding config available - user may not have admin access');
+        hwAccelType = 'unknown (requires admin)';
+      }
+
+      return {
+        serverName: info.ServerName || 'Jellyfin Server',
+        version: info.Version || 'Unknown',
+        hardwareAccelerationEnabled,
+        transcodingTempPath: encodingConfig?.TranscodingTempPath || encodingConfig?.transcodingTempPath,
+        encoderLocationType: hwAccelType
+      };
+    } catch (error: any) {
+      console.error('[Jellyfin] getSystemInfo error:', error.message);
+      // Return default values if we can't get system info
+      return {
+        serverName: 'Jellyfin Server',
+        version: 'Unknown',
+        hardwareAccelerationEnabled: false,
+        encoderLocationType: 'error'
+      };
+    }
   }
 
   // Getters

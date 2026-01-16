@@ -82,6 +82,19 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', version: config.appVersion });
 });
 
+// Restart server endpoint
+app.post('/api/restart', (_req, res) => {
+  logger.info('Server restart requested');
+  res.json({ status: 'restarting', message: 'Server is restarting...' });
+
+  // Give time for response to be sent, then exit
+  // The process manager (pm2, systemd, or manual restart) should bring it back
+  setTimeout(() => {
+    logger.info('Shutting down for restart...');
+    process.exit(0);
+  }, 500);
+});
+
 // Serve index.html for all other routes (SPA)
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'client', 'index.html'));
@@ -93,18 +106,14 @@ app.use(errorHandler);
 // Setup WebSocket
 setupWebSocket(server);
 
-// Cleanup stale downloads periodically
-setInterval(() => {
-  downloadService.cleanupStaleSessions();
-}, 5 * 60 * 1000); // Every 5 minutes
-
-// Initialize settings and start server
+// Initialize services and start server
 (async () => {
   try {
-    await settingsService.load();
+    // Initialize download service (loads settings and starts cleanup interval)
+    await downloadService.initialize();
     logger.info(`Settings loaded (maxConcurrentDownloads: ${settingsService.get('maxConcurrentDownloads')})`);
   } catch (err) {
-    logger.warn('Failed to load settings, using defaults');
+    logger.warn('Failed to initialize services, using defaults');
   }
 
   server.listen(config.port, () => {
@@ -119,6 +128,7 @@ setInterval(() => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received, shutting down gracefully');
+  downloadService.shutdown();
   server.close(() => {
     logger.info('Server closed');
     process.exit(0);
@@ -127,6 +137,7 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully');
+  downloadService.shutdown();
   server.close(() => {
     logger.info('Server closed');
     process.exit(0);

@@ -8,6 +8,7 @@ class DownloadManager {
     this.ws = null;
     this.currentSession = null;
     this.filename = null;
+    this.title = null; // For notifications
     this.onProgressCallback = null;
     this.onCompleteCallback = null;
     this.onErrorCallback = null;
@@ -105,23 +106,28 @@ class DownloadManager {
   handleComplete() {
     if (!this.currentSession) return;
 
+    const title = this.title;
+
     // Trigger file download
     this.triggerDownload(this.currentSession, this.filename);
 
-    // Notify callback
+    // Notify callback with title
     if (this.onCompleteCallback) {
-      this.onCompleteCallback();
+      this.onCompleteCallback(title);
     }
 
     // Cleanup
     this.unsubscribe(this.currentSession);
     this.currentSession = null;
     this.filename = null;
+    this.title = null;
   }
 
   handleError(error) {
+    const title = this.title;
+
     if (this.onErrorCallback) {
-      this.onErrorCallback(error);
+      this.onErrorCallback(error, title);
     }
 
     // Cleanup
@@ -129,6 +135,7 @@ class DownloadManager {
       this.unsubscribe(this.currentSession);
       this.currentSession = null;
       this.filename = null;
+      this.title = null;
     }
   }
 
@@ -144,19 +151,20 @@ class DownloadManager {
     document.body.removeChild(link);
   }
 
-  async startDownload(itemId, mediaSourceId, preset, audioStreamIndex, filename) {
-    console.log('DownloadManager.startDownload called with:', { itemId, mediaSourceId, preset, audioStreamIndex, filename });
+  async startDownload(itemId, mediaSourceId, preset, audioStreamIndex, subtitleStreamIndex, subtitleMethod, filename, title) {
+    console.log('DownloadManager.startDownload called with:', { itemId, mediaSourceId, preset, audioStreamIndex, subtitleStreamIndex, subtitleMethod, filename, title });
 
     // Ensure WebSocket is connected
     this.connect();
 
     // Start the download
     console.log('Calling API startDownload...');
-    const result = await window.api.startDownload(itemId, mediaSourceId, preset, audioStreamIndex);
+    const result = await window.api.startDownload(itemId, mediaSourceId, preset, audioStreamIndex, subtitleStreamIndex, subtitleMethod);
     console.log('API startDownload result:', result);
 
     this.currentSession = result.sessionId;
     this.filename = filename || result.filename;
+    this.title = title || result.title || 'Download';
 
     // Subscribe to progress updates
     this.subscribe(result.sessionId);

@@ -77,6 +77,32 @@ router.get('/items', async (req: Request, res: Response, next: NextFunction) => 
   }
 });
 
+// Get all episodes for a series (handles shows without seasons)
+router.get('/series/:id/episodes', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const jellyfin = createJellyfinService(req.session.jellyfin!);
+    const result = await jellyfin.getSeriesEpisodes(req.params.id);
+
+    res.json({
+      items: result.Items.map(item => ({
+        id: item.Id,
+        name: item.Name,
+        type: item.Type,
+        year: item.ProductionYear,
+        overview: item.Overview,
+        runtime: item.RunTimeTicks ? Math.round(item.RunTimeTicks / 600000000) : null,
+        imageUrl: jellyfin.getImageUrl(item.Id, 'Primary', 300),
+        seriesName: item.SeriesName,
+        seasonNumber: item.ParentIndexNumber,
+        indexNumber: item.IndexNumber
+      })),
+      totalCount: result.TotalRecordCount
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Get single item details
 router.get('/items/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {

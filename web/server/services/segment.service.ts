@@ -11,16 +11,18 @@ import { logger } from '../index';
 export interface SegmentPaths {
   initSegmentPath?: string;
   segmentPaths: string[];
+  bytesDownloaded: number;
 }
 
 export class SegmentService {
   // Download a single segment with retry logic
   // Handles segments not yet transcoded by Jellyfin
+  // Returns the number of bytes downloaded
   async downloadSegment(
     url: string,
     outputPath: string,
     retries: number = 8
-  ): Promise<void> {
+  ): Promise<number> {
     let lastError: Error | undefined;
 
     for (let attempt = 0; attempt < retries; attempt++) {
@@ -66,7 +68,7 @@ export class SegmentService {
         }
 
         await fsp.writeFile(outputPath, response.data);
-        return;
+        return response.data.length; // Return bytes downloaded
       } catch (err) {
         lastError = err as Error;
         const errorMsg = (err as Error).message || '';
@@ -89,7 +91,7 @@ export class SegmentService {
     segments: HLSSegment[],
     initSegmentUrl: string | undefined,
     tempDir: string,
-    onProgress?: (completed: number, total: number) => void,
+    onProgress?: (completed: number, total: number, bytesDownloaded: number) => void,
     onSegmentComplete?: (index: number) => void,
     completedIndexes?: Set<number>
   ): Promise<SegmentPaths> {
@@ -97,11 +99,13 @@ export class SegmentService {
     await fsp.mkdir(tempDir, { recursive: true });
 
     const result: SegmentPaths = {
-      segmentPaths: []
+      segmentPaths: [],
+      bytesDownloaded: 0
     };
 
     const total = segments.length + (initSegmentUrl ? 1 : 0);
     let completed = completedIndexes ? completedIndexes.size : 0;
+    let totalBytes = 0;
 
     // Download init segment first if present and not already downloaded
     if (initSegmentUrl) {
@@ -109,16 +113,32 @@ export class SegmentService {
       const initExists = await this.fileExists(initPath);
 
       if (!initExists) {
-        await this.downloadSegment(initSegmentUrl, initPath);
+        const bytes = await this.downloadSegment(initSegmentUrl, initPath);
+        totalBytes += bytes;
         completed++;
-        onProgress?.(completed, total);
+        onProgress?.(completed, total, totalBytes);
       } else {
-        // Already have init segment
+        // Already have init segment - get its size
+        try {
+          const stat = await fsp.stat(initPath);
+          totalBytes += stat.size;
+        } catch {}
         if (!completedIndexes?.size) {
           completed++; // Count init if not already counted
         }
       }
       result.initSegmentPath = initPath;
+    }
+
+    // Calculate bytes already downloaded from existing segments
+    if (completedIndexes) {
+      for (const index of completedIndexes) {
+        const segPath = path.join(tempDir, `${index}.mp4`);
+        try {
+          const stat = await fsp.stat(segPath);
+          totalBytes += stat.size;
+        } catch {}
+      }
     }
 
     // Filter out already completed segments
@@ -148,10 +168,11 @@ export class SegmentService {
         const segmentPath = path.join(tempDir, `${segment.index}.mp4`);
 
         try {
-          await this.downloadSegment(segment.url, segmentPath);
+          const bytes = await this.downloadSegment(segment.url, segmentPath);
           segmentPaths[segment.index] = segmentPath;
+          totalBytes += bytes;
           completed++;
-          onProgress?.(completed, total);
+          onProgress?.(completed, total, totalBytes);
           onSegmentComplete?.(segment.index);
         } catch (err) {
           throw new Error(`Failed to download segment ${segment.index}: ${(err as Error).message}`);
@@ -167,6 +188,7 @@ export class SegmentService {
     await Promise.all(downloading);
 
     result.segmentPaths = segmentPaths.filter(p => p); // Remove any undefined
+    result.bytesDownloaded = totalBytes;
 
     return result;
   }
@@ -339,6 +361,103 @@ export class SegmentService {
 
       ffmpeg.on('error', (err) => {
         reject(new Error(`ffmpeg not found. Please install ffmpeg: ${err.message}`));
+      });
+    });
+  }
+
+  // Fetch subtitle file from Jellyfin and save to disk
+  async fetchSubtitle(
+    jellyfinUrl: string,
+    accessToken: string,
+    itemId: string,
+    mediaSourceId: string,
+    subtitleIndex: number,
+    outputDir: string
+  ): Promise<string | null> {
+    // Try different subtitle formats in order of preference
+    const formats = ['srt', 'vtt', 'ass', 'sub'];
+
+    for (const format of formats) {
+      const url = `${jellyfinUrl}/Videos/${itemId}/${mediaSourceId}/Subtitles/${subtitleIndex}/Stream.${format}?api_key=${accessToken}`;
+
+      try {
+        logger.info(`Fetching subtitle format: ${format}`);
+        const response = await axios.get(url, {
+          responseType: 'arraybuffer',
+          timeout: 30000,
+          validateStatus: (status) => status < 500
+        });
+
+        if (response.status === 200 && response.data.length > 0) {
+          const subtitlePath = path.join(outputDir, `subtitle.${format}`);
+          await fsp.writeFile(subtitlePath, response.data);
+          logger.info(`Subtitle downloaded successfully: ${subtitlePath} (${response.data.length} bytes)`);
+          return subtitlePath;
+        }
+      } catch (err: any) {
+        logger.debug(`Failed to fetch ${format} subtitle: ${err.message}`);
+      }
+    }
+
+    logger.warn('Failed to fetch subtitle in any supported format');
+    return null;
+  }
+
+  // Mux subtitle into MP4 using ffmpeg
+  async muxWithSubtitle(
+    videoPath: string,
+    subtitlePath: string,
+    outputPath: string,
+    language?: string
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Determine subtitle codec based on file extension
+      const ext = path.extname(subtitlePath).toLowerCase().slice(1);
+      const subtitleCodec = ext === 'ass' ? 'ass' : 'mov_text';
+
+      const args = [
+        '-i', videoPath,
+        '-i', subtitlePath,
+        '-c:v', 'copy',
+        '-c:a', 'copy',
+        '-c:s', subtitleCodec,
+        '-map', '0:v',
+        '-map', '0:a',
+        '-map', '1:0',
+        '-movflags', '+faststart'
+      ];
+
+      // Add language metadata if available
+      if (language) {
+        args.push('-metadata:s:s:0', `language=${language}`);
+      }
+
+      args.push('-y', outputPath);
+
+      logger.info(`Running ffmpeg subtitle mux: ffmpeg ${args.join(' ')}`);
+
+      const ffmpeg = spawn('ffmpeg', args, {
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+
+      let stderr = '';
+
+      ffmpeg.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      ffmpeg.on('close', (code) => {
+        if (code === 0) {
+          logger.info(`Subtitle muxed successfully: ${outputPath}`);
+          resolve();
+        } else {
+          logger.error(`ffmpeg subtitle mux failed with code ${code}: ${stderr.slice(-500)}`);
+          reject(new Error(`ffmpeg subtitle mux failed with code ${code}`));
+        }
+      });
+
+      ffmpeg.on('error', (err) => {
+        reject(new Error(`ffmpeg not found: ${err.message}`));
       });
     });
   }

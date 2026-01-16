@@ -9,8 +9,13 @@ import { segmentService } from './segment.service';
 import { config } from '../config';
 import { logger } from '../index';
 import { settingsService } from './settings.service';
+import { retentionService } from './retention.service';
 
 type ProgressCallback = (progress: DownloadProgress) => void;
+
+// Retry configuration
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 5000; // 5 seconds between retries
 
 export class DownloadService {
   private sessions: Map<string, DownloadSession> = new Map();
@@ -20,11 +25,43 @@ export class DownloadService {
   private activeDownloads: Set<string> = new Set();
   private downloadQueue: string[] = []; // Ordered session IDs
 
+  // Initialization state
+  private initialized = false;
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
+
   constructor() {
-    // Restore any resumable sessions on startup
-    this.restoreResumableSessions().catch(err => {
+    // Initialization is now deferred to initialize() method
+  }
+
+  // Initialize the service - must be called before use
+  async initialize(): Promise<void> {
+    if (this.initialized) return;
+
+    // Load settings first
+    await settingsService.load();
+
+    // Restore any resumable sessions
+    await this.restoreResumableSessions().catch(err => {
       logger.warn(`Failed to restore sessions: ${err.message}`);
     });
+
+    // Start periodic cleanup every hour
+    this.cleanupInterval = setInterval(() => {
+      this.cleanupStaleSessions().catch(err => {
+        logger.warn(`Failed to cleanup stale sessions: ${err.message}`);
+      });
+    }, 60 * 60 * 1000); // 1 hour
+
+    this.initialized = true;
+    logger.info('Download service initialized');
+  }
+
+  // Shutdown cleanup
+  shutdown(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
   }
 
   // Start a new download (adds to queue)
@@ -34,8 +71,12 @@ export class DownloadService {
     title: string,
     hlsUrl: string,
     expectedDurationSeconds: number,
-    transcodeSettings: TranscodeSettings
+    transcodeSettings: TranscodeSettings,
+    softSubtitle?: DownloadSession['softSubtitle']
   ): Promise<DownloadSession> {
+    // Validate transcodeSettings
+    this.validateTranscodeSettings(transcodeSettings);
+
     const sessionId = uuidv4();
     const tempDir = path.join(config.tempDir, sessionId);
 
@@ -60,7 +101,9 @@ export class DownloadService {
       transcodeSettings,
       expectedDurationSeconds,
       completedSegmentIndexes: new Set(),
-      queuedAt: new Date()
+      queuedAt: new Date(),
+      bytesDownloaded: 0,
+      softSubtitle
     };
 
     this.sessions.set(sessionId, session);
@@ -108,12 +151,32 @@ export class DownloadService {
 
       // Start processing in background
       this.processDownload(session)
-        .catch(err => {
-          logger.error(`Download failed for ${session.title}: ${err.message}`);
-          session.status = 'failed';
-          session.error = err.message;
-          this.saveState(session).catch(() => {});
-          this.emitProgress(session);
+        .catch(async (err) => {
+          const retryCount = (session.retryCount || 0) + 1;
+          session.lastError = err.message;
+
+          if (retryCount <= MAX_RETRIES) {
+            // Retry the download
+            logger.warn(`Download failed for ${session.title} (attempt ${retryCount}/${MAX_RETRIES}): ${err.message}. Retrying in ${RETRY_DELAY_MS / 1000}s...`);
+            session.retryCount = retryCount;
+            session.status = 'queued';
+            session.error = `Retry ${retryCount}/${MAX_RETRIES}: ${err.message}`;
+            this.emitProgress(session);
+
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+
+            // Re-add to front of queue for retry
+            this.downloadQueue.unshift(session.id);
+            this.updateQueuePositions();
+          } else {
+            // Max retries exceeded, mark as failed
+            logger.error(`Download permanently failed for ${session.title} after ${MAX_RETRIES} retries: ${err.message}`);
+            session.status = 'failed';
+            session.error = `Failed after ${MAX_RETRIES} retries: ${err.message}`;
+            this.saveState(session).catch(() => {});
+            this.emitProgress(session);
+          }
         })
         .finally(() => {
           this.activeDownloads.delete(nextId!);
@@ -241,7 +304,10 @@ export class DownloadService {
       session.mediaPlaylistUrl = masterPlaylist.mediaPlaylistUrl;
 
       logger.info(`[${session.id}] Starting download for "${session.title}"`);
-      this.updateSession(session.id, { status: 'downloading' });
+      this.updateSession(session.id, {
+        status: 'downloading',
+        downloadStartedAt: new Date()
+      });
 
       // Fetch playlist
       const mediaPlaylist = await hlsParser.parseMediaPlaylist(masterPlaylist.mediaPlaylistUrl);
@@ -268,11 +334,12 @@ export class DownloadService {
         mediaPlaylist.segments,
         mediaPlaylist.initSegmentUrl,
         session.tempDir,
-        (completed, total) => {
+        (completed, total, bytesDownloaded) => {
           const progress = completed / total;
           this.updateSession(session.id, {
             progress,
-            completedSegments: completed
+            completedSegments: completed,
+            bytesDownloaded
           });
         },
         async (segmentIndex) => {
@@ -291,7 +358,8 @@ export class DownloadService {
         segmentPaths: result.segmentPaths
       });
 
-      const finalPath = path.join(config.downloadsDir, session.id, session.filename);
+      const downloadsDir = settingsService.get('downloadsDir');
+      const finalPath = path.join(downloadsDir, session.id, session.filename);
 
       logger.info(`[${session.id}] Muxing with ffmpeg to: ${finalPath}`);
 
@@ -300,6 +368,39 @@ export class DownloadService {
         result.segmentPaths,
         finalPath
       );
+
+      // Handle soft subtitles if present
+      if (session.softSubtitle) {
+        logger.info(`[${session.id}] Fetching soft subtitle (stream ${session.softSubtitle.streamIndex})`);
+
+        const subtitlePath = await segmentService.fetchSubtitle(
+          session.softSubtitle.jellyfinUrl,
+          session.softSubtitle.accessToken,
+          session.itemId,
+          session.mediaSourceId,
+          session.softSubtitle.streamIndex,
+          session.tempDir
+        );
+
+        if (subtitlePath) {
+          logger.info(`[${session.id}] Muxing subtitle into video`);
+          const videoWithSubsPath = finalPath.replace('.mp4', '.subs.mp4');
+
+          await segmentService.muxWithSubtitle(
+            finalPath,
+            subtitlePath,
+            videoWithSubsPath,
+            session.softSubtitle.language
+          );
+
+          // Replace original with subtitled version
+          await fsp.unlink(finalPath);
+          await fsp.rename(videoWithSubsPath, finalPath);
+          logger.info(`[${session.id}] Soft subtitle muxing complete`);
+        } else {
+          logger.warn(`[${session.id}] Failed to fetch soft subtitle, video will be without subtitles`);
+        }
+      }
 
       const stat = await fsp.stat(finalPath);
       const totalSize = stat.size;
@@ -312,6 +413,11 @@ export class DownloadService {
       });
 
       logger.info(`[${session.id}] Download complete: ${Math.round(totalSize / 1024 / 1024)}MB`);
+
+      // Create retention metadata for the completed download
+      await retentionService.createRetentionMeta(session.id).catch(err => {
+        logger.warn(`[${session.id}] Failed to create retention metadata: ${err.message}`);
+      });
 
       await segmentService.cleanup(session.tempDir);
       await this.deleteState(session.id);
@@ -371,15 +477,19 @@ export class DownloadService {
 
       logger.info(`[${session.id}] Resuming: ${session.completedSegmentIndexes.size}/${session.totalSegments} segments already downloaded`);
 
+      // Set download start time for resumed downloads
+      this.updateSession(session.id, { downloadStartedAt: new Date() });
+
       const result = await segmentService.downloadSegments(
         session.segments,
         undefined,
         session.tempDir,
-        (completed, total) => {
+        (completed, total, bytesDownloaded) => {
           const progress = completed / total;
           this.updateSession(session.id, {
             progress,
-            completedSegments: completed
+            completedSegments: completed,
+            bytesDownloaded
           });
         },
         async (segmentIndex) => {
@@ -396,7 +506,8 @@ export class DownloadService {
         segmentPaths: result.segmentPaths
       });
 
-      const finalPath = path.join(config.downloadsDir, session.id, session.filename);
+      const downloadsDir = settingsService.get('downloadsDir');
+      const finalPath = path.join(downloadsDir, session.id, session.filename);
 
       logger.info(`[${session.id}] Muxing resumed download with ffmpeg to: ${finalPath}`);
 
@@ -405,6 +516,39 @@ export class DownloadService {
         result.segmentPaths,
         finalPath
       );
+
+      // Handle soft subtitles if present
+      if (session.softSubtitle) {
+        logger.info(`[${session.id}] Fetching soft subtitle for resumed download (stream ${session.softSubtitle.streamIndex})`);
+
+        const subtitlePath = await segmentService.fetchSubtitle(
+          session.softSubtitle.jellyfinUrl,
+          session.softSubtitle.accessToken,
+          session.itemId,
+          session.mediaSourceId,
+          session.softSubtitle.streamIndex,
+          session.tempDir
+        );
+
+        if (subtitlePath) {
+          logger.info(`[${session.id}] Muxing subtitle into resumed video`);
+          const videoWithSubsPath = finalPath.replace('.mp4', '.subs.mp4');
+
+          await segmentService.muxWithSubtitle(
+            finalPath,
+            subtitlePath,
+            videoWithSubsPath,
+            session.softSubtitle.language
+          );
+
+          // Replace original with subtitled version
+          await fsp.unlink(finalPath);
+          await fsp.rename(videoWithSubsPath, finalPath);
+          logger.info(`[${session.id}] Soft subtitle muxing complete`);
+        } else {
+          logger.warn(`[${session.id}] Failed to fetch soft subtitle, video will be without subtitles`);
+        }
+      }
 
       const stat = await fsp.stat(finalPath);
       const totalSize = stat.size;
@@ -417,6 +561,11 @@ export class DownloadService {
       });
 
       logger.info(`[${session.id}] Resume complete: ${Math.round(totalSize / 1024 / 1024)}MB`);
+
+      // Create retention metadata for the completed download
+      await retentionService.createRetentionMeta(session.id).catch(err => {
+        logger.warn(`[${session.id}] Failed to create retention metadata: ${err.message}`);
+      });
 
       await segmentService.cleanup(session.tempDir);
       await this.deleteState(session.id);
@@ -485,7 +634,8 @@ export class DownloadService {
         transcodeSettings: state.transcodeSettings,
         expectedDurationSeconds: state.expectedDurationSeconds,
         completedSegmentIndexes: new Set(state.completedSegmentIndexes),
-        segments: state.segments
+        segments: state.segments,
+        bytesDownloaded: 0 // Will be recalculated on resume
       };
 
       return session;
@@ -594,6 +744,48 @@ export class DownloadService {
     this.updateQueuePositions();
   }
 
+  // Cancel/remove multiple downloads by their original item IDs
+  async cancelByItemIds(itemIds: string[]): Promise<{ cancelled: number; removed: number }> {
+    const itemIdSet = new Set(itemIds);
+    let cancelled = 0;
+    let removed = 0;
+
+    // Find all sessions matching these item IDs
+    const sessionsToProcess: DownloadSession[] = [];
+    for (const session of this.sessions.values()) {
+      if (itemIdSet.has(session.itemId)) {
+        sessionsToProcess.push(session);
+      }
+    }
+
+    for (const session of sessionsToProcess) {
+      if (session.status === 'queued' || session.status === 'paused') {
+        // Remove from queue
+        const queueIdx = this.downloadQueue.indexOf(session.id);
+        if (queueIdx !== -1) {
+          this.downloadQueue.splice(queueIdx, 1);
+        }
+        await this.cleanup(session.id);
+        cancelled++;
+      } else if (session.status === 'downloading' || session.status === 'processing' || session.status === 'transcoding') {
+        // Cancel active download
+        this.activeDownloads.delete(session.id);
+        session.status = 'cancelled';
+        session.queuePosition = undefined;
+        this.emitProgress(session);
+        await this.cleanup(session.id);
+        cancelled++;
+      } else if (session.status === 'completed' || session.status === 'failed' || session.status === 'cancelled') {
+        // Remove completed/failed
+        await this.cleanup(session.id);
+        removed++;
+      }
+    }
+
+    this.updateQueuePositions();
+    return { cancelled, removed };
+  }
+
   // Remove a failed/completed download from the list
   async removeDownload(sessionId: string): Promise<boolean> {
     const session = this.sessions.get(sessionId);
@@ -655,7 +847,9 @@ export class DownloadService {
         error: session.error,
         createdAt: session.createdAt,
         canResume: session.status === 'failed' && session.completedSegmentIndexes.size > 0,
-        queuePosition: session.queuePosition
+        queuePosition: session.queuePosition,
+        bytesDownloaded: session.bytesDownloaded,
+        downloadStartedAt: session.downloadStartedAt
       });
     }
 
@@ -700,7 +894,9 @@ export class DownloadService {
       totalSegments: session.totalSegments,
       error: session.error,
       canResume: session.status === 'failed' && session.completedSegmentIndexes.size > 0,
-      queuePosition: session.queuePosition
+      queuePosition: session.queuePosition,
+      bytesDownloaded: session.bytesDownloaded,
+      downloadStartedAt: session.downloadStartedAt
     };
   }
 
@@ -738,22 +934,73 @@ export class DownloadService {
       totalSegments: session.totalSegments,
       error: session.error,
       canResume: session.status === 'failed' && session.completedSegmentIndexes.size > 0,
-      queuePosition: session.queuePosition
+      queuePosition: session.queuePosition,
+      bytesDownloaded: session.bytesDownloaded,
+      downloadStartedAt: session.downloadStartedAt
     };
 
     callbacks.forEach(cb => cb(progress));
   }
 
-  // Cleanup stale sessions
+  // Validate transcode settings
+  private validateTranscodeSettings(settings: TranscodeSettings): void {
+    if (!settings || typeof settings !== 'object') {
+      throw new Error('transcodeSettings is required');
+    }
+
+    // Validate maxWidth
+    if (typeof settings.maxWidth !== 'number' || settings.maxWidth < 320 || settings.maxWidth > 7680) {
+      throw new Error('maxWidth must be a number between 320 and 7680');
+    }
+
+    // Validate maxBitrate
+    if (typeof settings.maxBitrate !== 'number' || settings.maxBitrate < 100_000 || settings.maxBitrate > 100_000_000) {
+      throw new Error('maxBitrate must be a number between 100000 and 100000000');
+    }
+
+    // Validate videoCodec
+    const validVideoCodecs = ['h264', 'hevc'];
+    if (typeof settings.videoCodec !== 'string' || !validVideoCodecs.includes(settings.videoCodec)) {
+      throw new Error('videoCodec must be h264 or hevc');
+    }
+
+    // Validate audioCodec
+    if (typeof settings.audioCodec !== 'string' || settings.audioCodec !== 'aac') {
+      throw new Error('audioCodec must be aac');
+    }
+
+    // Validate audioBitrate
+    if (typeof settings.audioBitrate !== 'number' || settings.audioBitrate < 32_000 || settings.audioBitrate > 640_000) {
+      throw new Error('audioBitrate must be a number between 32000 and 640000');
+    }
+
+    // Validate audioChannels
+    if (typeof settings.audioChannels !== 'number' || ![2, 6].includes(settings.audioChannels)) {
+      throw new Error('audioChannels must be 2 or 6');
+    }
+  }
+
+  // Cleanup stale sessions and expired files based on retention settings
   async cleanupStaleSessions(): Promise<void> {
     const now = Date.now();
     const maxAge = 24 * 60 * 60 * 1000;
 
+    // Clean up stale in-memory sessions (existing logic)
     for (const [sessionId, session] of this.sessions) {
       const age = now - session.createdAt.getTime();
       if (age > maxAge && !['downloading', 'processing', 'transcoding', 'queued'].includes(session.status)) {
         await this.cleanup(sessionId);
       }
+    }
+
+    // Clean up expired cached files based on retention settings
+    try {
+      const deleted = await retentionService.cleanupExpiredFiles();
+      if (deleted > 0) {
+        logger.info(`Retention cleanup: removed ${deleted} expired file(s)`);
+      }
+    } catch (err) {
+      logger.warn(`Retention cleanup failed: ${(err as Error).message}`);
     }
   }
 
@@ -767,6 +1014,73 @@ export class DownloadService {
       }).length,
       maxConcurrent: settingsService.get('maxConcurrentDownloads')
     };
+  }
+
+  // ============================================
+  // Batch Operations
+  // ============================================
+
+  // Pause all queued downloads
+  pauseAllQueued(): { paused: number } {
+    let paused = 0;
+
+    for (const sessionId of this.downloadQueue) {
+      const session = this.sessions.get(sessionId);
+      if (session && session.status === 'queued') {
+        session.status = 'paused';
+        session.pausedAt = new Date();
+        this.emitProgress(session);
+        paused++;
+      }
+    }
+
+    this.updateQueuePositions();
+    logger.info(`Batch pause: ${paused} downloads paused`);
+    return { paused };
+  }
+
+  // Resume all paused downloads
+  resumeAllPaused(): { resumed: number } {
+    let resumed = 0;
+
+    for (const sessionId of this.downloadQueue) {
+      const session = this.sessions.get(sessionId);
+      if (session && session.status === 'paused') {
+        session.status = 'queued';
+        session.pausedAt = undefined;
+        this.emitProgress(session);
+        resumed++;
+      }
+    }
+
+    this.updateQueuePositions();
+    this.processQueue();
+    logger.info(`Batch resume: ${resumed} downloads resumed`);
+    return { resumed };
+  }
+
+  // Clear all completed, failed, and cancelled downloads from the active list
+  // NOTE: This only removes from the in-memory session list, it does NOT delete
+  // the actual transcoded files. Those are managed separately in the cache.
+  async clearCompleted(): Promise<{ cleared: number }> {
+    let cleared = 0;
+    const toRemove: string[] = [];
+
+    for (const [sessionId, session] of this.sessions) {
+      if (session.status === 'completed' || session.status === 'failed' || session.status === 'cancelled') {
+        toRemove.push(sessionId);
+      }
+    }
+
+    for (const sessionId of toRemove) {
+      // Just remove from sessions map - don't call cleanup() which deletes files
+      this.sessions.delete(sessionId);
+      this.progressCallbacks.delete(sessionId);
+      cleared++;
+    }
+
+    logger.info(`Batch clear: ${cleared} transcodes cleared from active list`);
+    return { cleared };
   }
 }
 
