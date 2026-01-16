@@ -2244,6 +2244,14 @@
     let statsContent = '';
 
     if (isTranscoding) {
+      const bytesDownloaded = download.bytesDownloaded || 0;
+      const progress = download.transcodeProgress || download.progress || 0;
+      // Estimate total size based on progress (only if we have meaningful progress)
+      const estimatedTotal = progress > 0.01 ? Math.round(bytesDownloaded / progress) : 0;
+      const sizeStr = estimatedTotal > 0
+        ? `${formatBytes(bytesDownloaded)} / ${formatBytes(estimatedTotal)}`
+        : formatBytes(bytesDownloaded);
+
       progressContent = `
         <div class="download-item-progress">
           <div class="progress-bar transcoding">
@@ -2254,7 +2262,7 @@
       statsContent = `
         <div class="download-item-stats">
           <span class="percent">${transcodePercent}%</span>
-          <span class="segments">${formatDuration(download.transcodedSeconds || 0)} / ${formatDuration(download.expectedDurationSeconds || 0)}</span>
+          <span class="size">${sizeStr}</span>
         </div>
       `;
     } else if (download.status === 'downloading') {
@@ -2375,9 +2383,16 @@
       if (percentEl) {
         percentEl.textContent = `${transcodePercent}%`;
       }
-      const segmentsEl = item.querySelector('.segments');
-      if (segmentsEl) {
-        segmentsEl.textContent = `${formatDuration(download.transcodedSeconds || 0)} / ${formatDuration(download.expectedDurationSeconds || 0)}`;
+      // Update file size display
+      const sizeEl = item.querySelector('.size');
+      if (sizeEl) {
+        const bytesDownloaded = download.bytesDownloaded || 0;
+        const progress = download.transcodeProgress || download.progress || 0;
+        const estimatedTotal = progress > 0.01 ? Math.round(bytesDownloaded / progress) : 0;
+        const sizeStr = estimatedTotal > 0
+          ? `${formatBytes(bytesDownloaded)} / ${formatBytes(estimatedTotal)}`
+          : formatBytes(bytesDownloaded);
+        sizeEl.textContent = sizeStr;
       }
     } else {
       const downloadPercent = Math.round(download.progress * 100);
