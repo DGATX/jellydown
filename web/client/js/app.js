@@ -2370,6 +2370,11 @@
         ? `${formatBytes(bytesDownloaded)} / ${formatBytes(estimatedTotal)}`
         : formatBytes(bytesDownloaded);
 
+      // Calculate speed and ETA
+      const { speed, eta } = calculateSpeedAndETA(download);
+      const speedStr = formatSpeed(speed);
+      const etaStr = eta ? formatETA(eta) : '--';
+
       progressContent = `
         <div class="download-item-progress">
           <div class="progress-bar transcoding">
@@ -2380,28 +2385,9 @@
       statsContent = `
         <div class="download-item-stats">
           <span class="percent">${progressPercent}%</span>
-          <span class="size">${sizeStr}</span>
-        </div>
-      `;
-    } else if (false) { // downloading is now handled above
-      const { speed, eta } = calculateSpeedAndETA(download);
-      const speedStr = formatSpeed(speed);
-      const etaStr = eta ? formatETA(eta) : '--';
-      const bytesStr = formatBytes(download.bytesDownloaded || 0);
-
-      progressContent = `
-        <div class="download-item-progress">
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: ${progressPercent}%"></div>
-          </div>
-        </div>
-      `;
-      statsContent = `
-        <div class="download-item-stats">
-          <span class="percent">${progressPercent}%</span>
           <span class="speed">${speedStr}</span>
           <span class="eta">ETA: ${etaStr}</span>
-          <span class="size">${bytesStr}</span>
+          <span class="size">${sizeStr}</span>
         </div>
       `;
     } else if (download.status === 'processing' || download.status === 'completed') {
@@ -2502,6 +2488,16 @@
       if (percentEl) {
         percentEl.textContent = `${progressPercent}%`;
       }
+      // Update speed and ETA
+      const { speed, eta } = calculateSpeedAndETA(download);
+      const speedEl = item.querySelector('.speed');
+      if (speedEl) {
+        speedEl.textContent = formatSpeed(speed);
+      }
+      const etaEl = item.querySelector('.eta');
+      if (etaEl) {
+        etaEl.textContent = `ETA: ${eta ? formatETA(eta) : '--'}`;
+      }
       // Update file size display
       const sizeEl = item.querySelector('.size');
       if (sizeEl) {
@@ -2522,28 +2518,10 @@
       if (percentEl) {
         percentEl.textContent = `${downloadPercent}%`;
       }
-
-      // This branch now only handles non-transcoding statuses
-      if (false) { // downloading is handled above
-        const { speed, eta } = calculateSpeedAndETA(download);
-        const speedEl = item.querySelector('.speed');
-        if (speedEl) {
-          speedEl.textContent = formatSpeed(speed);
-        }
-        const etaEl = item.querySelector('.eta');
-        if (etaEl) {
-          etaEl.textContent = `ETA: ${eta ? formatETA(eta) : '--'}`;
-        }
-        const sizeEl = item.querySelector('.size');
-        if (sizeEl) {
-          sizeEl.textContent = formatBytes(download.bytesDownloaded || 0);
-        }
-      } else {
-        // Other statuses - update segments display
-        const segmentsEl = item.querySelector('.segments');
-        if (segmentsEl) {
-          segmentsEl.textContent = `${download.completedSegments} / ${download.totalSegments} segments`;
-        }
+      // Other statuses - update segments display
+      const segmentsEl = item.querySelector('.segments');
+      if (segmentsEl) {
+        segmentsEl.textContent = `${download.completedSegments} / ${download.totalSegments} segments`;
       }
     }
   }
