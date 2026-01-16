@@ -983,6 +983,7 @@
           const result = await window.api.startBatchDownload(items, preset);
           const successCount = result.results.filter(r => r.success).length;
           showToast(`Queued ${successCount} of ${items.length} episodes for transcoding`);
+          refreshDownloadsList();
         } catch (err) {
           console.error('Batch download failed:', err);
           showToast('Failed to start transcodes: ' + err.message, 'error');
@@ -1265,6 +1266,9 @@
 
       // Show toast notification (stay on library page so user can queue more)
       showToast(`Started transcoding "${item.name}"`);
+
+      // Update the download badge immediately
+      refreshDownloadsList();
     } catch (err) {
       console.error('Transcode failed:', err);
       showToast('Failed to start transcode: ' + err.message, 'error');
