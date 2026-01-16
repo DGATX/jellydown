@@ -2236,7 +2236,8 @@
   }
 
   function getDownloadItemContent(download) {
-    const isTranscoding = download.status === 'transcoding';
+    // Both 'transcoding' and 'downloading' are active transcode states
+    const isTranscoding = download.status === 'transcoding' || download.status === 'downloading';
     const progressPercent = Math.round((download.progress || 0) * 100);
 
     let progressContent = '';
@@ -2264,7 +2265,7 @@
           <span class="size">${sizeStr}</span>
         </div>
       `;
-    } else if (download.status === 'downloading') {
+    } else if (false) { // downloading is now handled above
       const { speed, eta } = calculateSpeedAndETA(download);
       const speedStr = formatSpeed(speed);
       const etaStr = eta ? formatETA(eta) : '--';
@@ -2370,7 +2371,8 @@
     }
 
     // Update progress based on status
-    const isTranscoding = download.status === 'transcoding';
+    // Both 'transcoding' and 'downloading' are active transcode states
+    const isTranscoding = download.status === 'transcoding' || download.status === 'downloading';
     const progressFill = item.querySelector('.progress-fill');
 
     if (isTranscoding) {
@@ -2403,8 +2405,8 @@
         percentEl.textContent = `${downloadPercent}%`;
       }
 
-      // Update speed and ETA for downloading status
-      if (download.status === 'downloading') {
+      // This branch now only handles non-transcoding statuses
+      if (false) { // downloading is handled above
         const { speed, eta } = calculateSpeedAndETA(download);
         const speedEl = item.querySelector('.speed');
         if (speedEl) {
