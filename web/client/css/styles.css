@@ -923,6 +923,18 @@ h1, h2, h3 {
 }
 
 /* Downloads Page */
+#downloads-page > .back-btn {
+  position: static;
+  margin-bottom: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--bg-hover);
+}
+
+#downloads-page > .back-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-dim);
+}
+
 #downloads-page .downloads-list {
   padding: 0;
   max-width: 800px;
