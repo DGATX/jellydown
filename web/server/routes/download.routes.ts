@@ -1,8 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import fsp from 'fs/promises';
 import path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 import { requireAuth } from '../middleware/auth.middleware';
 import { createJellyfinService } from '../services/jellyfin.service';
 import { downloadService } from '../services/download.service';
@@ -12,7 +11,36 @@ import { BatchDownloadRequest, BatchDownloadResult, BatchCancelRequest, BatchCan
 import { config } from '../config';
 import { logger } from '../index';
 
-const execAsync = promisify(exec);
+// Cross-platform safe ffprobe execution using spawn
+function spawnAsync(command: string, args: string[], timeout: number = 10000): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+
+    const timer = setTimeout(() => {
+      proc.kill();
+      reject(new Error('Process timed out'));
+    }, timeout);
+
+    proc.stdout.on('data', (data) => { stdout += data.toString(); });
+    proc.stderr.on('data', (data) => { stderr += data.toString(); });
+
+    proc.on('close', (code) => {
+      clearTimeout(timer);
+      if (code === 0) {
+        resolve(stdout);
+      } else {
+        reject(new Error(stderr || `Process exited with code ${code}`));
+      }
+    });
+
+    proc.on('error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+}
 
 const router = Router();
 
@@ -477,13 +505,16 @@ interface CachedFile {
   };
 }
 
-// Get video metadata using ffprobe
+// Get video metadata using ffprobe (cross-platform safe)
 async function getVideoMetadata(filePath: string): Promise<CachedFile['videoInfo']> {
   try {
-    const { stdout } = await execAsync(
-      `ffprobe -v quiet -print_format json -show_format -show_streams "${filePath}"`,
-      { timeout: 10000 }
-    );
+    const stdout = await spawnAsync('ffprobe', [
+      '-v', 'quiet',
+      '-print_format', 'json',
+      '-show_format',
+      '-show_streams',
+      filePath
+    ]);
 
     const data = JSON.parse(stdout);
     const videoStream = data.streams?.find((s: any) => s.codec_type === 'video');
