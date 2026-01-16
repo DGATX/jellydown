@@ -2237,15 +2237,14 @@
 
   function getDownloadItemContent(download) {
     const isTranscoding = download.status === 'transcoding';
-    const transcodePercent = Math.round((download.transcodeProgress || 0) * 100);
-    const downloadPercent = Math.round(download.progress * 100);
+    const progressPercent = Math.round((download.progress || 0) * 100);
 
     let progressContent = '';
     let statsContent = '';
 
     if (isTranscoding) {
       const bytesDownloaded = download.bytesDownloaded || 0;
-      const progress = download.transcodeProgress || download.progress || 0;
+      const progress = download.progress || 0;
       // Estimate total size based on progress (only if we have meaningful progress)
       const estimatedTotal = progress > 0.01 ? Math.round(bytesDownloaded / progress) : 0;
       const sizeStr = estimatedTotal > 0
@@ -2255,13 +2254,13 @@
       progressContent = `
         <div class="download-item-progress">
           <div class="progress-bar transcoding">
-            <div class="progress-fill" style="width: ${transcodePercent}%"></div>
+            <div class="progress-fill" style="width: ${progressPercent}%"></div>
           </div>
         </div>
       `;
       statsContent = `
         <div class="download-item-stats">
-          <span class="percent">${transcodePercent}%</span>
+          <span class="percent">${progressPercent}%</span>
           <span class="size">${sizeStr}</span>
         </div>
       `;
@@ -2274,13 +2273,13 @@
       progressContent = `
         <div class="download-item-progress">
           <div class="progress-bar">
-            <div class="progress-fill" style="width: ${downloadPercent}%"></div>
+            <div class="progress-fill" style="width: ${progressPercent}%"></div>
           </div>
         </div>
       `;
       statsContent = `
         <div class="download-item-stats">
-          <span class="percent">${downloadPercent}%</span>
+          <span class="percent">${progressPercent}%</span>
           <span class="speed">${speedStr}</span>
           <span class="eta">ETA: ${etaStr}</span>
           <span class="size">${bytesStr}</span>
@@ -2375,19 +2374,19 @@
     const progressFill = item.querySelector('.progress-fill');
 
     if (isTranscoding) {
-      const transcodePercent = Math.round((download.transcodeProgress || 0) * 100);
+      const progressPercent = Math.round((download.progress || 0) * 100);
       if (progressFill) {
-        progressFill.style.width = `${transcodePercent}%`;
+        progressFill.style.width = `${progressPercent}%`;
       }
       const percentEl = item.querySelector('.percent');
       if (percentEl) {
-        percentEl.textContent = `${transcodePercent}%`;
+        percentEl.textContent = `${progressPercent}%`;
       }
       // Update file size display
       const sizeEl = item.querySelector('.size');
       if (sizeEl) {
         const bytesDownloaded = download.bytesDownloaded || 0;
-        const progress = download.transcodeProgress || download.progress || 0;
+        const progress = download.progress || 0;
         const estimatedTotal = progress > 0.01 ? Math.round(bytesDownloaded / progress) : 0;
         const sizeStr = estimatedTotal > 0
           ? `${formatBytes(bytesDownloaded)} / ${formatBytes(estimatedTotal)}`
