@@ -1732,35 +1732,153 @@
     return `<span class="retention-normal">${retention.effectiveDays}d</span>${suffix}`;
   }
 
-  async function handleEditRetention(cacheId) {
+  function handleEditRetention(cacheId) {
     const cacheItem = cacheData.find(c => c.id === cacheId);
     const current = cacheItem?.retention?.retentionDays ?? cacheItem?.retention?.effectiveDays ?? null;
+    const isForever = current === null;
 
-    const input = prompt(
-      'Enter retention in days (1-365), or leave empty for "forever":',
-      current === null ? '' : current.toString()
-    );
+    // Find the retention cell for this item
+    const row = document.querySelector(`tr[data-cache-id="${cacheId}"]`);
+    if (!row) return;
 
-    if (input === null) return; // Cancelled
+    const cell = row.querySelector('.col-retention');
+    if (!cell || cell.classList.contains('editing')) return;
 
-    let retentionDays;
-    if (input.trim() === '' || input.toLowerCase() === 'forever') {
-      retentionDays = null;
-    } else {
-      retentionDays = parseInt(input, 10);
-      if (isNaN(retentionDays) || retentionDays < 1 || retentionDays > 365) {
-        showToast('Invalid retention value. Must be 1-365 days or empty for forever.', 'error');
-        return;
+    // Store original content and mark as editing
+    const originalContent = cell.innerHTML;
+    cell.classList.add('editing');
+
+    // Create inline editor
+    cell.innerHTML = `
+      <div class="retention-editor">
+        <div class="retention-editor-toggle">
+          <button type="button" class="retention-toggle-btn ${isForever ? 'active' : ''}" data-value="forever">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+            Forever
+          </button>
+          <button type="button" class="retention-toggle-btn ${!isForever ? 'active' : ''}" data-value="days">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            Days
+          </button>
+        </div>
+        <div class="retention-editor-days ${isForever ? 'hidden' : ''}">
+          <input type="number" class="retention-days-input" min="1" max="365" value="${current || 30}" />
+          <span class="retention-days-suffix">days</span>
+        </div>
+        <div class="retention-editor-actions">
+          <button type="button" class="retention-save-btn" title="Save">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <polyline points="20,6 9,17 4,12"/>
+            </svg>
+          </button>
+          <button type="button" class="retention-cancel-btn" title="Cancel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Get editor elements
+    const editor = cell.querySelector('.retention-editor');
+    const toggleBtns = cell.querySelectorAll('.retention-toggle-btn');
+    const daysContainer = cell.querySelector('.retention-editor-days');
+    const daysInput = cell.querySelector('.retention-days-input');
+    const saveBtn = cell.querySelector('.retention-save-btn');
+    const cancelBtn = cell.querySelector('.retention-cancel-btn');
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+      editor.classList.add('visible');
+      if (!isForever) daysInput.select();
+    });
+
+    // Toggle handlers
+    toggleBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        toggleBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (btn.dataset.value === 'forever') {
+          daysContainer.classList.add('hidden');
+        } else {
+          daysContainer.classList.remove('hidden');
+          setTimeout(() => daysInput.select(), 50);
+        }
+      });
+    });
+
+    // Cancel handler
+    const cancelEdit = () => {
+      editor.classList.remove('visible');
+      setTimeout(() => {
+        cell.innerHTML = originalContent;
+        cell.classList.remove('editing');
+        // Re-attach the edit button listener
+        const editBtn = cell.querySelector('[data-action="edit-retention"]');
+        if (editBtn) {
+          editBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            handleEditRetention(cacheId);
+          });
+        }
+      }, 200);
+    };
+
+    cancelBtn.addEventListener('click', cancelEdit);
+
+    // Save handler
+    const saveEdit = async () => {
+      const isForeverSelected = cell.querySelector('.retention-toggle-btn.active').dataset.value === 'forever';
+      let retentionDays = null;
+
+      if (!isForeverSelected) {
+        retentionDays = parseInt(daysInput.value, 10);
+        if (isNaN(retentionDays) || retentionDays < 1 || retentionDays > 365) {
+          daysInput.classList.add('error');
+          setTimeout(() => daysInput.classList.remove('error'), 500);
+          return;
+        }
       }
-    }
 
-    try {
-      await window.api.updateCachedRetention(cacheId, retentionDays);
-      showToast('Retention updated');
-      loadCacheForDownloadsPage();
-    } catch (err) {
-      showToast('Failed to update retention: ' + err.message, 'error');
-    }
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<div class="retention-spinner"></div>';
+
+      try {
+        await window.api.updateCachedRetention(cacheId, retentionDays);
+        showToast('Retention updated');
+        loadCacheForDownloadsPage();
+      } catch (err) {
+        showToast('Failed to update retention: ' + err.message, 'error');
+        cancelEdit();
+      }
+    };
+
+    saveBtn.addEventListener('click', saveEdit);
+
+    // Enter key saves, Escape cancels
+    daysInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') saveEdit();
+      if (e.key === 'Escape') cancelEdit();
+    });
+
+    // Click outside to cancel
+    const outsideClickHandler = (e) => {
+      if (!cell.contains(e.target)) {
+        document.removeEventListener('click', outsideClickHandler);
+        cancelEdit();
+      }
+    };
+    setTimeout(() => document.addEventListener('click', outsideClickHandler), 0);
   }
 
   function formatVideoQuality(videoInfo) {
