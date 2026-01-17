@@ -3205,53 +3205,29 @@
 
     console.log('[JellyDown] Adding download button listener to:', elements.startDownload);
     if (elements.startDownload) {
-      // Track if we're currently processing to avoid double-taps
-      let isProcessing = false;
+      // Simple, direct click handler
+      elements.startDownload.onclick = async function(e) {
+        // Visual feedback - change button text immediately
+        const btn = elements.startDownload;
+        const originalText = btn.querySelector('span').textContent;
+        btn.querySelector('span').textContent = 'Starting...';
+        btn.disabled = true;
 
-      const handleDownloadTap = async function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        // Prevent double-execution
-        if (isProcessing) {
-          console.log('[JellyDown] Ignoring duplicate tap');
-          return;
-        }
-
-        isProcessing = true;
-        console.log('[JellyDown] Download button activated via', e.type);
+        console.log('[JellyDown] Transcode button clicked!');
+        alert('Button tapped! Starting download...'); // Debug alert
 
         try {
           await handleStartDownload();
+        } catch (err) {
+          console.error('[JellyDown] Error:', err);
+          alert('Error: ' + err.message);
         } finally {
-          // Reset after a short delay
-          setTimeout(() => { isProcessing = false; }, 500);
+          btn.querySelector('span').textContent = originalText;
+          btn.disabled = false;
         }
       };
 
-      // Use click event - it works on both touch and mouse
-      elements.startDownload.addEventListener('click', handleDownloadTap);
-
-      // For iOS Safari: also listen for touchend in case click doesn't fire
-      let touchHandled = false;
-      elements.startDownload.addEventListener('touchstart', function() {
-        touchHandled = false;
-      }, { passive: true });
-
-      elements.startDownload.addEventListener('touchend', function(e) {
-        if (touchHandled) return;
-        touchHandled = true;
-
-        // Small delay to let click fire first; if not, handle touchend
-        setTimeout(() => {
-          if (!isProcessing) {
-            console.log('[JellyDown] Fallback touchend handler');
-            handleDownloadTap(e);
-          }
-        }, 100);
-      }, { passive: true });
-
-      console.log('[JellyDown] Download button listener added successfully');
+      console.log('[JellyDown] Download button onclick handler set');
     } else {
       console.error('[JellyDown] ERROR: startDownload element not found!');
     }
