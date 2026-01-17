@@ -11,6 +11,7 @@ import { config } from './config';
 import { errorHandler } from './middleware/error.middleware';
 import { setupWebSocket } from './websocket/progress';
 import { downloadService } from './services/download.service';
+import { checkDependencies } from './utils/ffmpeg-check';
 
 const FileStore = FileStoreFactory(session);
 
@@ -120,6 +121,35 @@ setupWebSocket(server);
 
 // Initialize services and start server
 (async () => {
+  // Check for ffmpeg/ffprobe availability
+  const deps = await checkDependencies();
+
+  if (!deps.allAvailable) {
+    logger.warn('='.repeat(60));
+    logger.warn('DEPENDENCY CHECK FAILED');
+    logger.warn('='.repeat(60));
+
+    if (!deps.ffmpeg.available) {
+      logger.error(`ffmpeg: NOT FOUND - ${deps.ffmpeg.error}`);
+      logger.info(`  ${deps.ffmpeg.installHint}`);
+    } else {
+      logger.info(`ffmpeg: OK (version ${deps.ffmpeg.version})`);
+    }
+
+    if (!deps.ffprobe.available) {
+      logger.error(`ffprobe: NOT FOUND - ${deps.ffprobe.error}`);
+      logger.info(`  ${deps.ffprobe.installHint}`);
+    } else {
+      logger.info(`ffprobe: OK (version ${deps.ffprobe.version})`);
+    }
+
+    logger.warn('='.repeat(60));
+    logger.warn('Downloads will fail until ffmpeg is installed!');
+    logger.warn('='.repeat(60));
+  } else {
+    logger.info(`ffmpeg ${deps.ffmpeg.version} and ffprobe ${deps.ffprobe.version} found`);
+  }
+
   try {
     // Initialize download service (loads settings and starts cleanup interval)
     await downloadService.initialize();

@@ -45,7 +45,34 @@ Then open http://localhost:6942 in your browser.
 ### Prerequisites
 
 - Node.js 20+
-- ffmpeg (for video muxing)
+- ffmpeg and ffprobe (for video muxing and metadata)
+
+#### Installing ffmpeg
+
+**macOS (Homebrew):**
+```bash
+brew install ffmpeg
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt update && sudo apt install ffmpeg
+```
+
+**Fedora/RHEL:**
+```bash
+sudo dnf install ffmpeg
+```
+
+**Windows (Chocolatey):**
+```powershell
+choco install ffmpeg
+```
+
+**Windows (Manual):**
+1. Download from https://ffmpeg.org/download.html
+2. Extract to `C:\ffmpeg`
+3. Add `C:\ffmpeg\bin` to your PATH environment variable
 
 ### Steps
 
@@ -287,6 +314,22 @@ WebSocket endpoint at `/ws` for real-time progress updates.
 
 - Check the `downloads` directory permissions
 - Ensure ffmpeg is installed and accessible
+
+### "ffmpeg not found" error
+
+JellyDown checks for ffmpeg/ffprobe on startup and will show a warning if not found:
+
+```
+DEPENDENCY CHECK FAILED
+ffmpeg: NOT FOUND - ffmpeg not found in PATH
+  Install with your package manager: sudo apt install ffmpeg
+```
+
+Make sure ffmpeg is in your system PATH. Test with:
+```bash
+ffmpeg -version
+ffprobe -version
+```
 
 ## Contributing
 

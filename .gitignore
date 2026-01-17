@@ -33,3 +33,7 @@ npm-debug.log*
 
 # TypeScript cache
 *.tsbuildinfo
+
+# Test results
+playwright-report/
+test-results/
