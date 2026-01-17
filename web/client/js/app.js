@@ -1242,9 +1242,6 @@
     console.log('subtitleMethod:', subtitleMethod);
     console.log('mediaSource:', item.mediaSource);
 
-    // Close modal
-    closeMovieModal();
-
     // Request notification permission on first download (non-blocking)
     if (!notificationsEnabled && Notification.permission === 'default') {
       requestNotificationPermission();
@@ -1263,6 +1260,9 @@
         item.name // Pass title for notifications
       );
       console.log('Download started:', result);
+
+      // Close modal only after success
+      closeMovieModal();
 
       // Show toast notification (stay on library page so user can queue more)
       showToast(`Started transcoding "${item.name}"`);
