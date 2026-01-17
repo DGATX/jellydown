@@ -3170,26 +3170,59 @@
     // Sort controls
     elements.sortSelect.addEventListener('change', handleSortChange);
 
-    // Movie grid clicks
-    elements.moviesGrid.addEventListener('click', (e) => {
+    // Movie grid clicks - with touch support
+    const handleMovieCardTap = (e) => {
       const card = e.target.closest('.movie-card');
       if (card) {
         openMovieModal(card.dataset.id);
       }
-    });
+    };
+    elements.moviesGrid.addEventListener('click', handleMovieCardTap);
 
-    // Modal
-    elements.modal.querySelector('.modal-backdrop').addEventListener('click', closeMovieModal);
-    elements.modal.querySelector('.modal-close').addEventListener('click', closeMovieModal);
+    // Modal close - with touch support
+    const modalBackdrop = elements.modal.querySelector('.modal-backdrop');
+    const modalClose = elements.modal.querySelector('.modal-close');
+
+    modalBackdrop.addEventListener('click', closeMovieModal);
+    modalClose.addEventListener('click', closeMovieModal);
+
+    // Touch support for modal close (iOS)
+    modalClose.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      closeMovieModal();
+    }, { passive: false });
+
+    // Quality presets - with touch support
     elements.qualityPresets.addEventListener('click', handleQualitySelect);
+    elements.qualityPresets.addEventListener('touchend', (e) => {
+      const preset = e.target.closest('.quality-preset');
+      if (preset) {
+        e.preventDefault();
+        handleQualitySelect(e);
+      }
+    }, { passive: false });
     elements.backToSeries.addEventListener('click', backToSeriesBrowser);
 
     console.log('[JellyDown] Adding download button listener to:', elements.startDownload);
     if (elements.startDownload) {
-      elements.startDownload.addEventListener('click', function(e) {
-        console.log('[JellyDown] Download button clicked!');
+      // Use both click and touchend for better mobile support
+      const handleDownloadTap = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log('[JellyDown] Download button activated via', e.type);
         handleStartDownload();
-      });
+      };
+
+      elements.startDownload.addEventListener('click', handleDownloadTap);
+
+      // Add touchend for iOS Safari which sometimes doesn't fire click
+      elements.startDownload.addEventListener('touchend', function(e) {
+        // Prevent ghost click
+        e.preventDefault();
+        console.log('[JellyDown] Download button touchend');
+        handleStartDownload();
+      }, { passive: false });
+
       console.log('[JellyDown] Download button listener added successfully');
     } else {
       console.error('[JellyDown] ERROR: startDownload element not found!');

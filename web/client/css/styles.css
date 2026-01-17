@@ -3737,3 +3737,161 @@ h1, h2, h3 {
     transform: rotate(360deg);
   }
 }
+
+/* ============================================
+   Mobile Touch Support & Safe Areas
+   ============================================ */
+
+/* Safe area insets for notched phones (iPhone X+) */
+@supports (padding: env(safe-area-inset-top)) {
+  .library-header {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .modal {
+    padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  }
+
+  .toast {
+    bottom: max(24px, env(safe-area-inset-bottom));
+  }
+
+  .downloads-panel {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Touch-friendly styles - detect touch devices */
+@media (hover: none) and (pointer: coarse) {
+  /* Movie cards: make entire card tappable with visual feedback */
+  .movie-card {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .movie-card:active {
+    transform: scale(0.98);
+  }
+
+  /* Ensure buttons have visible active states */
+  .btn:active,
+  .icon-btn:active {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+
+  /* Remove hover transforms that cause issues on touch */
+  .movie-card:hover {
+    transform: none;
+  }
+
+  .movie-card:hover img {
+    transform: none;
+  }
+
+  /* Better touch scrolling on iOS */
+  .modal-body {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .series-browser {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Larger touch targets for small buttons */
+  .modal-close {
+    width: 48px;
+    height: 48px;
+  }
+
+  .quality-preset {
+    min-height: 60px;
+  }
+}
+
+/* Mobile-specific modal improvements */
+@media (max-width: 768px) {
+  /* Ensure modal is scrollable and button is visible */
+  .modal-content {
+    max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px); /* Dynamic viewport height for mobile browsers */
+  }
+
+  .modal-body {
+    max-height: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 32px; /* Extra padding so button isn't cut off */
+  }
+
+  /* Ensure download button is always visible */
+  .download-options {
+    padding-bottom: 16px;
+  }
+
+  #start-download {
+    position: sticky;
+    bottom: 0;
+    margin-top: 16px;
+    z-index: 10;
+  }
+
+  /* Hide back button text on login screen too (consistency) */
+  .back-btn span {
+    display: none;
+  }
+
+  /* Ensure adequate touch target for back button */
+  .back-btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 12px;
+  }
+}
+
+/* Small mobile specific fixes */
+@media (max-width: 480px) {
+  .modal {
+    padding: 12px;
+  }
+
+  .modal-content {
+    border-radius: 16px;
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+  }
+
+  .modal-body {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .movie-poster {
+    width: 100px;
+  }
+
+  .movie-title {
+    font-size: 1.25rem;
+  }
+
+  .movie-overview {
+    font-size: 0.9rem;
+    -webkit-line-clamp: 4;
+  }
+
+  /* Ensure transcode button is prominent */
+  #start-download {
+    padding: 16px 24px;
+    font-size: 1rem;
+  }
+
+  /* Full width quality presets on small screens */
+  .quality-presets {
+    grid-template-columns: 1fr;
+  }
+
+  .quality-preset {
+    padding: 14px 16px;
+  }
+}
