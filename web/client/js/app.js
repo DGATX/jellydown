@@ -3205,29 +3205,37 @@
 
     console.log('[JellyDown] Adding download button listener to:', elements.startDownload);
     if (elements.startDownload) {
-      // Simple, direct click handler
-      elements.startDownload.onclick = async function(e) {
-        // Visual feedback - change button text immediately
+      // Handler function for download button
+      async function onDownloadButtonTap(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
         const btn = elements.startDownload;
+        if (btn.disabled) return; // Prevent double-tap
+
+        // Visual feedback
         const originalText = btn.querySelector('span').textContent;
         btn.querySelector('span').textContent = 'Starting...';
         btn.disabled = true;
 
-        console.log('[JellyDown] Transcode button clicked!');
-        alert('Button tapped! Starting download...'); // Debug alert
+        console.log('[JellyDown] Transcode button activated');
 
         try {
           await handleStartDownload();
         } catch (err) {
           console.error('[JellyDown] Error:', err);
-          alert('Error: ' + err.message);
         } finally {
           btn.querySelector('span').textContent = originalText;
           btn.disabled = false;
         }
-      };
+      }
 
-      console.log('[JellyDown] Download button onclick handler set');
+      // Add both click and touchend for cross-platform support
+      // touchend fires more reliably on iOS Safari inside scrollable containers
+      elements.startDownload.addEventListener('click', onDownloadButtonTap);
+      elements.startDownload.addEventListener('touchend', onDownloadButtonTap, { passive: false });
+
+      console.log('[JellyDown] Download button handlers set (click + touchend)');
     } else {
       console.error('[JellyDown] ERROR: startDownload element not found!');
     }

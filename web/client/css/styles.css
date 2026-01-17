@@ -1139,6 +1139,11 @@ h1, h2, h3 {
   background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(8px);
   animation: fadeIn 0.3s var(--ease-out);
+  z-index: 1;
+}
+
+.modal-content {
+  z-index: 2;
 }
 
 @keyframes fadeIn {
@@ -3854,9 +3859,15 @@ h1, h2, h3 {
   #start-download {
     margin-top: 16px;
     /* Ensure touch events work on iOS */
+    position: relative;
+    z-index: 10;
     touch-action: manipulation;
     -webkit-tap-highlight-color: rgba(212, 165, 116, 0.3);
     cursor: pointer;
+    /* Ensure the button is a block-level element that captures all touches */
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   /* Hide back button text on login screen too (consistency) */
