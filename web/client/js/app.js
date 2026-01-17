@@ -3205,23 +3205,51 @@
 
     console.log('[JellyDown] Adding download button listener to:', elements.startDownload);
     if (elements.startDownload) {
-      // Use both click and touchend for better mobile support
-      const handleDownloadTap = function(e) {
+      // Track if we're currently processing to avoid double-taps
+      let isProcessing = false;
+
+      const handleDownloadTap = async function(e) {
         e.preventDefault();
         e.stopPropagation();
+
+        // Prevent double-execution
+        if (isProcessing) {
+          console.log('[JellyDown] Ignoring duplicate tap');
+          return;
+        }
+
+        isProcessing = true;
         console.log('[JellyDown] Download button activated via', e.type);
-        handleStartDownload();
+
+        try {
+          await handleStartDownload();
+        } finally {
+          // Reset after a short delay
+          setTimeout(() => { isProcessing = false; }, 500);
+        }
       };
 
+      // Use click event - it works on both touch and mouse
       elements.startDownload.addEventListener('click', handleDownloadTap);
 
-      // Add touchend for iOS Safari which sometimes doesn't fire click
+      // For iOS Safari: also listen for touchend in case click doesn't fire
+      let touchHandled = false;
+      elements.startDownload.addEventListener('touchstart', function() {
+        touchHandled = false;
+      }, { passive: true });
+
       elements.startDownload.addEventListener('touchend', function(e) {
-        // Prevent ghost click
-        e.preventDefault();
-        console.log('[JellyDown] Download button touchend');
-        handleStartDownload();
-      }, { passive: false });
+        if (touchHandled) return;
+        touchHandled = true;
+
+        // Small delay to let click fire first; if not, handle touchend
+        setTimeout(() => {
+          if (!isProcessing) {
+            console.log('[JellyDown] Fallback touchend handler');
+            handleDownloadTap(e);
+          }
+        }, 100);
+      }, { passive: true });
 
       console.log('[JellyDown] Download button listener added successfully');
     } else {

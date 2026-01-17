@@ -3773,11 +3773,26 @@ h1, h2, h3 {
     transform: scale(0.98);
   }
 
+  /* All buttons should have touch-action for proper touch handling */
+  .btn,
+  .icon-btn,
+  button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(212, 165, 116, 0.2);
+  }
+
   /* Ensure buttons have visible active states */
   .btn:active,
   .icon-btn:active {
     transform: scale(0.95);
-    opacity: 0.9;
+    opacity: 0.8;
+    transition: transform 0.1s, opacity 0.1s;
+  }
+
+  /* Primary button active state - more visible */
+  .btn-primary:active {
+    background: var(--accent-dim);
+    transform: scale(0.97);
   }
 
   /* Remove hover transforms that cause issues on touch */
@@ -3786,6 +3801,11 @@ h1, h2, h3 {
   }
 
   .movie-card:hover img {
+    transform: none;
+  }
+
+  .btn:hover,
+  .btn-primary:hover {
     transform: none;
   }
 
@@ -3807,6 +3827,7 @@ h1, h2, h3 {
 
   .quality-preset {
     min-height: 60px;
+    touch-action: manipulation;
   }
 }
 
@@ -3825,16 +3846,17 @@ h1, h2, h3 {
     padding-bottom: 32px; /* Extra padding so button isn't cut off */
   }
 
-  /* Ensure download button is always visible */
+  /* Ensure download button is always visible and tappable */
   .download-options {
-    padding-bottom: 16px;
+    padding-bottom: 24px;
   }
 
   #start-download {
-    position: sticky;
-    bottom: 0;
     margin-top: 16px;
-    z-index: 10;
+    /* Ensure touch events work on iOS */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(212, 165, 116, 0.3);
+    cursor: pointer;
   }
 
   /* Hide back button text on login screen too (consistency) */
