@@ -3230,10 +3230,10 @@
         }
       }
 
-      // Use standard click event which works on both desktop and mobile
-      elements.startDownload.addEventListener('click', onDownloadButtonTap);
+      // Use pointerup for reliable cross-platform touch/click handling
+      elements.startDownload.addEventListener('pointerup', onDownloadButtonTap);
 
-      console.log('[JellyDown] Download button handlers set (click only)');
+      console.log('[JellyDown] Download button handlers set (pointerup)');
     } else {
       console.error('[JellyDown] ERROR: startDownload element not found!');
     }
