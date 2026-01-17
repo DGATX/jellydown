@@ -3,7 +3,7 @@
  * Coordinates UI and handles user interactions
  */
 
-(function() {
+(function () {
   'use strict';
 
   // State
@@ -501,14 +501,14 @@
     const html = newItems.map(item => `
       <div class="movie-card" data-id="${item.id}">
         ${item.imageUrl
-          ? `<img src="${item.imageUrl}" alt="${item.name}" loading="lazy">`
-          : `<div class="movie-card-placeholder">
+        ? `<img src="${item.imageUrl}" alt="${item.name}" loading="lazy">`
+        : `<div class="movie-card-placeholder">
                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                  <rect x="2" y="2" width="20" height="20" rx="2"/>
                  <path d="M10 8l6 4-6 4V8z"/>
                </svg>
              </div>`
-        }
+      }
         <div class="movie-card-overlay">
           <h3 class="movie-card-title">${item.name}</h3>
           ${item.year ? `<span class="movie-card-year">${item.year}</span>` : ''}
@@ -790,9 +790,9 @@
       <div class="series-list-item episode-item" data-episode-id="${ep.id}">
         <div class="series-list-item-thumb episode-thumb">
           ${ep.imageUrl
-            ? `<img src="${ep.imageUrl}" alt="${ep.name}">`
-            : `<div class="episode-number">E${ep.indexNumber || '?'}</div>`
-          }
+        ? `<img src="${ep.imageUrl}" alt="${ep.name}">`
+        : `<div class="episode-number">E${ep.indexNumber || '?'}</div>`
+      }
         </div>
         <div class="series-list-item-info">
           <div class="series-list-item-title">${ep.indexNumber ? `${ep.indexNumber}. ` : ''}${ep.name}</div>
@@ -833,9 +833,9 @@
       <div class="series-list-item" data-season-id="${season.id}">
         <div class="series-list-item-thumb">
           ${season.imageUrl
-            ? `<img src="${season.imageUrl}" alt="${season.name}">`
-            : ''
-          }
+        ? `<img src="${season.imageUrl}" alt="${season.name}">`
+        : ''
+      }
         </div>
         <div class="series-list-item-info">
           <div class="series-list-item-title">${season.name}</div>
@@ -925,9 +925,9 @@
       <div class="series-list-item" data-episode-id="${episode.id}">
         <div class="series-list-item-thumb episode">
           ${episode.imageUrl
-            ? `<img src="${episode.imageUrl}" alt="${episode.name}">`
-            : ''
-          }
+        ? `<img src="${episode.imageUrl}" alt="${episode.name}">`
+        : ''
+      }
         </div>
         <div class="series-list-item-info">
           <div class="series-list-item-title">
@@ -2094,8 +2094,8 @@
 
     currentPresets.forEach((preset, index) => {
       const resolution = preset.maxWidth <= 854 ? '480p' :
-                        preset.maxWidth <= 1280 ? '720p' :
-                        preset.maxWidth <= 1920 ? '1080p' : '4K';
+        preset.maxWidth <= 1280 ? '720p' :
+          preset.maxWidth <= 1920 ? '1080p' : '4K';
       const videoBitrateMbps = (preset.maxBitrate / 1_000_000).toFixed(1);
       const audioBitrateKbps = preset.audioBitrate / 1000;
       const codecLabel = preset.videoCodec === 'hevc' ? 'HEVC' : 'H.264';
@@ -3230,12 +3230,10 @@
         }
       }
 
-      // Add both click and touchend for cross-platform support
-      // touchend fires more reliably on iOS Safari inside scrollable containers
+      // Use standard click event which works on both desktop and mobile
       elements.startDownload.addEventListener('click', onDownloadButtonTap);
-      elements.startDownload.addEventListener('touchend', onDownloadButtonTap, { passive: false });
 
-      console.log('[JellyDown] Download button handlers set (click + touchend)');
+      console.log('[JellyDown] Download button handlers set (click only)');
     } else {
       console.error('[JellyDown] ERROR: startDownload element not found!');
     }
