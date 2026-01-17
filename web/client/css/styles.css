@@ -1153,6 +1153,8 @@ h1, h2, h3 {
 
 .modal-content {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 900px;
   max-height: 90vh;
@@ -1217,9 +1219,10 @@ h1, h2, h3 {
 .modal-body {
   position: relative;
   display: flex;
+  flex: 1;
+  min-height: 0; /* Allow flexbox child to shrink below content size for scrolling */
   gap: 32px;
   padding: 32px;
-  max-height: 90vh;
   overflow-y: auto;
 }
 
@@ -3818,6 +3821,7 @@ h1, h2, h3 {
   .modal-body {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+    touch-action: pan-y;
   }
 
   .series-browser {
@@ -3845,9 +3849,11 @@ h1, h2, h3 {
   }
 
   .modal-body {
-    max-height: none;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     padding-bottom: 32px; /* Extra padding so button isn't cut off */
   }
 
