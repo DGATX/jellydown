@@ -553,8 +553,8 @@
       <!-- Fixed footer outside scroll area for iOS touch compatibility -->
       <div class="modal-footer" id="modal-footer">
         <button type="button" id="start-download" class="btn btn-primary btn-large"
-                ontouchstart="try{window.triggerTranscode();}catch(e){alert('ERROR: '+e.message);}"
-                onclick="try{window.triggerTranscode();}catch(e){alert('ERROR: '+e.message);}">
+                ontouchstart="alert('type: ' + typeof window.triggerTranscode);"
+                onclick="alert('type: ' + typeof window.triggerTranscode);">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7,10 12,15 17,10"/>
