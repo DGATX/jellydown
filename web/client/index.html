@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=17">
+  <link rel="stylesheet" href="/css/styles.css?v=18">
 </head>
 <body>
   <!-- Film grain overlay -->
@@ -547,7 +547,7 @@
 
             <div class="download-estimate" id="download-estimate"></div>
 
-            <button id="start-download" type="button" class="btn btn-primary btn-large">
+            <button id="start-download" type="button" class="btn btn-primary btn-large" onclick="window.triggerTranscode && window.triggerTranscode()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7,10 12,15 17,10"/>
@@ -591,9 +591,9 @@
   </div>
 
   <script>console.log('[JellyDown] Scripts loading...');</script>
-  <script src="/js/api.js?v=15"></script>
-  <script src="/js/download.js?v=15"></script>
-  <script src="/js/app.js?v=15"></script>
+  <script src="/js/api.js?v=16"></script>
+  <script src="/js/download.js?v=16"></script>
+  <script src="/js/app.js?v=16"></script>
   <script>
     console.log('[JellyDown] All scripts loaded');
     console.log('[JellyDown] window.api:', typeof window.api);

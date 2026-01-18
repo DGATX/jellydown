@@ -3194,14 +3194,16 @@
     if (elements.startDownload) {
       let isProcessing = false;
 
-      // Simple click handler - iOS synthesizes click from touch when touch-action: manipulation is set
-      elements.startDownload.addEventListener('click', async function(e) {
-        e.preventDefault();
-        e.stopPropagation();
+      // Handler function - exposed globally for inline onclick fallback
+      async function handleTranscodeClick() {
+        console.log('[JellyDown] handleTranscodeClick called');
 
-        console.log('[JellyDown] Transcode button clicked');
+        const btn = elements.startDownload;
+        if (!btn) {
+          console.error('[JellyDown] Button not found');
+          return;
+        }
 
-        const btn = this;
         if (btn.disabled || isProcessing) {
           console.log('[JellyDown] Button disabled or processing, ignoring');
           return;
@@ -3210,24 +3212,29 @@
         isProcessing = true;
 
         // Visual feedback
-        const originalText = btn.querySelector('span').textContent;
-        btn.querySelector('span').textContent = 'Starting...';
+        const spanEl = btn.querySelector('span');
+        const originalText = spanEl ? spanEl.textContent : 'Transcode';
+        if (spanEl) spanEl.textContent = 'Starting...';
         btn.disabled = true;
-
-        console.log('[JellyDown] Transcode button activated');
 
         try {
           await handleStartDownload();
         } catch (err) {
           console.error('[JellyDown] Error:', err);
         } finally {
-          btn.querySelector('span').textContent = originalText;
+          if (spanEl) spanEl.textContent = originalText;
           btn.disabled = false;
           setTimeout(() => { isProcessing = false; }, 300);
         }
-      });
+      }
 
-      console.log('[JellyDown] Download button click handler set');
+      // Expose globally for inline onclick (most reliable on iOS)
+      window.triggerTranscode = handleTranscodeClick;
+
+      // Also set onclick property as backup
+      elements.startDownload.onclick = handleTranscodeClick;
+
+      console.log('[JellyDown] Download button handlers set (onclick + global)');
     } else {
       console.error('[JellyDown] ERROR: startDownload element not found!');
     }
