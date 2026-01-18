@@ -3864,29 +3864,17 @@ h1, h2, h3 {
 
   #start-download {
     margin-top: 16px;
-    /* Ensure touch events work on iOS */
     position: relative;
     z-index: 10;
+    /* Critical for iOS - allows click to synthesize from touch */
     touch-action: manipulation;
     -webkit-tap-highlight-color: rgba(212, 165, 116, 0.3);
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
     cursor: pointer;
-    /* Ensure the button is a block-level element that captures all touches */
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Minimum touch target size */
+    /* Minimum touch target size for iOS */
     min-height: 48px;
-    /* Prevent any pointer-events issues */
-    pointer-events: auto;
-  }
-
-  /* Active state feedback for iOS */
-  #start-download:active {
-    transform: scale(0.97);
-    opacity: 0.9;
   }
 
   /* Hide back button text on login screen too (consistency) */
@@ -4052,8 +4040,6 @@ h1, h2, h3 {
     overscroll-behavior-y: contain;
     /* Ensure momentum scrolling on iOS */
     -webkit-overflow-scrolling: touch;
-    /* Allow vertical scroll only */
-    touch-action: pan-y;
     /* Ensure it can shrink to fit */
     min-height: 0;
     flex: 1 1 auto;
@@ -4078,6 +4064,15 @@ h1, h2, h3 {
 
   .series-list {
     overscroll-behavior-y: contain;
+  }
+
+  /* Ensure close button is visible and tappable on mobile */
+  .modal-close {
+    z-index: 100;
+    width: 44px;
+    height: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(255, 255, 255, 0.3);
   }
 }
 

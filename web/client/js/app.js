@@ -3179,42 +3179,29 @@
     };
     elements.moviesGrid.addEventListener('click', handleMovieCardTap);
 
-    // Modal close - with touch support
+    // Modal close - simple click handler (works on all platforms)
     const modalBackdrop = elements.modal.querySelector('.modal-backdrop');
     const modalClose = elements.modal.querySelector('.modal-close');
 
     modalBackdrop.addEventListener('click', closeMovieModal);
     modalClose.addEventListener('click', closeMovieModal);
 
-    // Touch support for modal close (iOS)
-    modalClose.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      closeMovieModal();
-    }, { passive: false });
-
-    // Quality presets - with touch support
+    // Quality presets - simple click handler
     elements.qualityPresets.addEventListener('click', handleQualitySelect);
-    elements.qualityPresets.addEventListener('touchend', (e) => {
-      const preset = e.target.closest('.quality-preset');
-      if (preset) {
-        e.preventDefault();
-        handleQualitySelect(e);
-      }
-    }, { passive: false });
     elements.backToSeries.addEventListener('click', backToSeriesBrowser);
 
     console.log('[JellyDown] Adding download button listener to:', elements.startDownload);
     if (elements.startDownload) {
-      // Track state for iOS touch handling
       let isProcessing = false;
-      let touchStartY = 0;
-      let touchStartTime = 0;
-      let handledByTouch = false;
 
-      // Core handler function
-      async function executeDownload() {
-        const btn = elements.startDownload;
+      // Simple click handler - iOS synthesizes click from touch when touch-action: manipulation is set
+      elements.startDownload.addEventListener('click', async function(e) {
+        e.preventDefault();
+        e.stopPropagation();
 
+        console.log('[JellyDown] Transcode button clicked');
+
+        const btn = this;
         if (btn.disabled || isProcessing) {
           console.log('[JellyDown] Button disabled or processing, ignoring');
           return;
@@ -3238,49 +3225,9 @@
           btn.disabled = false;
           setTimeout(() => { isProcessing = false; }, 300);
         }
-      }
-
-      // iOS Chrome/Safari: Use touch events as primary method
-      // These fire reliably even inside scrollable containers
-      elements.startDownload.addEventListener('touchstart', (e) => {
-        touchStartY = e.touches[0].clientY;
-        touchStartTime = Date.now();
-        handledByTouch = false;
-        console.log('[JellyDown] touchstart at Y:', touchStartY);
-      }, { passive: true });
-
-      elements.startDownload.addEventListener('touchend', (e) => {
-        const touchEndY = e.changedTouches[0].clientY;
-        const touchDuration = Date.now() - touchStartTime;
-        const touchDistance = Math.abs(touchEndY - touchStartY);
-
-        console.log('[JellyDown] touchend - distance:', touchDistance, 'duration:', touchDuration);
-
-        // Only trigger if:
-        // - Touch didn't move much (< 10px, not a scroll)
-        // - Touch was quick enough (< 500ms, not a long press)
-        // - Not already processing
-        if (touchDistance < 10 && touchDuration < 500 && !isProcessing) {
-          e.preventDefault(); // Prevent click from also firing
-          handledByTouch = true;
-          console.log('[JellyDown] touchend - executing download');
-          executeDownload();
-        }
-      }, { passive: false });
-
-      // Fallback click handler for non-touch devices and edge cases
-      elements.startDownload.addEventListener('click', (e) => {
-        console.log('[JellyDown] click event - handledByTouch:', handledByTouch);
-        // Skip if already handled by touch
-        if (handledByTouch) {
-          handledByTouch = false;
-          return;
-        }
-        e.preventDefault();
-        executeDownload();
       });
 
-      console.log('[JellyDown] Download button handlers set (touch + click)');
+      console.log('[JellyDown] Download button click handler set');
     } else {
       console.error('[JellyDown] ERROR: startDownload element not found!');
     }
