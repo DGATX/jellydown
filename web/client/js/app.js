@@ -3226,8 +3226,9 @@
       }
 
       // Expose globally - wrap in sync function for iOS inline handler compatibility
+      // Use setTimeout(0) to defer execution, fixing iOS touch event timing issues
       window.triggerTranscode = function() {
-        handleTranscodeClick();  // Call async fn without await
+        setTimeout(handleTranscodeClick, 0);
       };
 
       console.log('[JellyDown] triggerTranscode exposed globally for inline handlers');
