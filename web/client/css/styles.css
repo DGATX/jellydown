@@ -1214,10 +1214,12 @@ h1, h2, h3 {
   mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
   -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 100%);
   opacity: 0.4;
+  pointer-events: none; /* Critical: allow clicks to pass through to content below */
 }
 
 .modal-body {
   position: relative;
+  z-index: 5; /* Above modal-backdrop-image */
   display: flex;
   flex: 1;
   min-height: 0; /* Allow flexbox child to shrink below content size for scrolling */
