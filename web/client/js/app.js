@@ -3195,7 +3195,13 @@
       let isProcessing = false;
 
       async function handleTranscodeClick() {
+        console.log('[DEBUG] handleTranscodeClick ENTERED');
+
         const btn = elements.startDownload;
+        console.log('[DEBUG] btn =', btn);
+        console.log('[DEBUG] btn.disabled =', btn ? btn.disabled : 'N/A');
+        console.log('[DEBUG] isProcessing =', isProcessing);
+
         if (!btn) {
           console.error('[JellyDown] Button not found');
           return;
@@ -3206,6 +3212,7 @@
           return;
         }
 
+        console.log('[DEBUG] Starting transcode process...');
         isProcessing = true;
 
         // Visual feedback
@@ -3215,7 +3222,9 @@
         btn.disabled = true;
 
         try {
+          console.log('[DEBUG] Calling handleStartDownload...');
           await handleStartDownload();
+          console.log('[DEBUG] handleStartDownload completed');
         } catch (err) {
           console.error('[JellyDown] Error:', err);
         } finally {
@@ -3228,6 +3237,7 @@
       // Expose globally - wrap in sync function for iOS inline handler compatibility
       // Use setTimeout(0) to defer execution, fixing iOS touch event timing issues
       window.triggerTranscode = function() {
+        console.log('[DEBUG] triggerTranscode called!');
         setTimeout(handleTranscodeClick, 0);
       };
 
