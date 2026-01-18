@@ -1243,7 +1243,8 @@
     console.log('mediaSource:', item.mediaSource);
 
     // Request notification permission on first download (non-blocking)
-    if (!notificationsEnabled && Notification.permission === 'default') {
+    // Check if Notification API exists (not supported on iOS)
+    if (!notificationsEnabled && typeof Notification !== 'undefined' && Notification.permission === 'default') {
       requestNotificationPermission();
     }
 
