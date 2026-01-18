@@ -6,8 +6,6 @@
 (function () {
   'use strict';
 
-  alert('APP.JS STARTED');
-
   // State
   let currentServerUrl = '';
   let currentServerName = '';
@@ -3229,34 +3227,10 @@
         }
       }
 
-      // Expose globally for debugging/fallback
+      // Expose globally - inline HTML handlers (ontouchstart/onclick) call this
       window.triggerTranscode = handleTranscodeClick;
 
-      // Direct listeners on button element - more reliable on iOS than document delegation
-      const btn = elements.startDownload;
-
-      alert('Setting up button: ' + (btn ? 'FOUND' : 'NOT FOUND'));
-
-      btn.addEventListener('touchstart', function(e) {
-        alert('TOUCHSTART fired!');
-        e.preventDefault();
-        e.stopPropagation();
-        handleTranscodeClick();
-      }, { passive: false });
-
-      btn.addEventListener('touchend', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }, { passive: false });
-
-      btn.addEventListener('click', function(e) {
-        alert('CLICK fired!');
-        e.preventDefault();
-        e.stopPropagation();
-        handleTranscodeClick();
-      });
-
-      console.log('[JellyDown] Download button handlers set (direct on element)');
+      console.log('[JellyDown] triggerTranscode exposed globally for inline handlers');
     } else {
       console.error('[JellyDown] ERROR: startDownload element not found!');
     }
