@@ -3195,8 +3195,6 @@
       let isProcessing = false;
 
       async function handleTranscodeClick() {
-        alert('handleTranscodeClick CALLED!');
-
         const btn = elements.startDownload;
         if (!btn) {
           console.error('[JellyDown] Button not found');
