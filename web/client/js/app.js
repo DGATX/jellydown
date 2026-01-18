@@ -3228,13 +3228,21 @@
         }
       }
 
-      // Expose globally for inline onclick (most reliable on iOS)
+      // Expose globally for debugging/fallback
       window.triggerTranscode = handleTranscodeClick;
 
-      // Also set onclick property as backup
-      elements.startDownload.onclick = handleTranscodeClick;
+      // iOS: touchend with preventDefault fires before the synthetic click and suppresses it.
+      // We handle touchend for touch devices and click for desktop. passive:false required for preventDefault.
+      elements.startDownload.addEventListener('touchend', function (e) {
+        e.preventDefault();
+        handleTranscodeClick();
+      }, { passive: false });
+      elements.startDownload.addEventListener('click', function (e) {
+        e.preventDefault();
+        handleTranscodeClick();
+      });
 
-      console.log('[JellyDown] Download button handlers set (onclick + global)');
+      console.log('[JellyDown] Download button handlers set (touchend + click + global)');
     } else {
       console.error('[JellyDown] ERROR: startDownload element not found!');
     }

@@ -552,16 +552,14 @@
 
       <!-- Fixed footer outside scroll area for iOS touch compatibility -->
       <div class="modal-footer" id="modal-footer">
-        <a href="javascript:void(0)" id="start-download" class="btn btn-primary btn-large" role="button"
-           onclick="window.triggerTranscode && window.triggerTranscode(); return false;"
-           ontouchend="event.preventDefault(); window.triggerTranscode && window.triggerTranscode();">
+        <button type="button" id="start-download" class="btn btn-primary btn-large" onclick="void 0">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="7,10 12,15 17,10"/>
             <line x1="12" y1="15" x2="12" y2="3"/>
           </svg>
           <span>Transcode</span>
-        </a>
+        </button>
       </div>
     </div>
   </div>
@@ -598,7 +596,7 @@
   <script>console.log('[JellyDown] Scripts loading...');</script>
   <script src="/js/api.js?v=16"></script>
   <script src="/js/download.js?v=16"></script>
-  <script src="/js/app.js?v=16"></script>
+  <script src="/js/app.js?v=17"></script>
   <script>
     console.log('[JellyDown] All scripts loaded');
     console.log('[JellyDown] window.api:', typeof window.api);
