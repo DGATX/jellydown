@@ -3234,20 +3234,19 @@
       const btn = elements.startDownload;
 
       btn.addEventListener('touchstart', function(e) {
-        console.log('[JellyDown] touchstart on button');
+        alert('TOUCHSTART fired!');
         e.preventDefault();
         e.stopPropagation();
         handleTranscodeClick();
       }, { passive: false });
 
       btn.addEventListener('touchend', function(e) {
-        console.log('[JellyDown] touchend on button');
         e.preventDefault();
         e.stopPropagation();
       }, { passive: false });
 
       btn.addEventListener('click', function(e) {
-        console.log('[JellyDown] click on button');
+        alert('CLICK fired!');
         e.preventDefault();
         e.stopPropagation();
         handleTranscodeClick();
