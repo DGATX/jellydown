@@ -3205,13 +3205,22 @@
 
     console.log('[JellyDown] Adding download button listener to:', elements.startDownload);
     if (elements.startDownload) {
-      // Handler function for download button
-      async function onDownloadButtonTap(e) {
-        e.preventDefault();
-        e.stopPropagation();
+      // Track state for iOS touch handling
+      let isProcessing = false;
+      let touchStartY = 0;
+      let touchStartTime = 0;
+      let handledByTouch = false;
 
+      // Core handler function
+      async function executeDownload() {
         const btn = elements.startDownload;
-        if (btn.disabled) return; // Prevent double-tap
+
+        if (btn.disabled || isProcessing) {
+          console.log('[JellyDown] Button disabled or processing, ignoring');
+          return;
+        }
+
+        isProcessing = true;
 
         // Visual feedback
         const originalText = btn.querySelector('span').textContent;
@@ -3227,13 +3236,51 @@
         } finally {
           btn.querySelector('span').textContent = originalText;
           btn.disabled = false;
+          setTimeout(() => { isProcessing = false; }, 300);
         }
       }
 
-      // Use pointerup for reliable cross-platform touch/click handling
-      elements.startDownload.addEventListener('pointerup', onDownloadButtonTap);
+      // iOS Chrome/Safari: Use touch events as primary method
+      // These fire reliably even inside scrollable containers
+      elements.startDownload.addEventListener('touchstart', (e) => {
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
+        handledByTouch = false;
+        console.log('[JellyDown] touchstart at Y:', touchStartY);
+      }, { passive: true });
 
-      console.log('[JellyDown] Download button handlers set (pointerup)');
+      elements.startDownload.addEventListener('touchend', (e) => {
+        const touchEndY = e.changedTouches[0].clientY;
+        const touchDuration = Date.now() - touchStartTime;
+        const touchDistance = Math.abs(touchEndY - touchStartY);
+
+        console.log('[JellyDown] touchend - distance:', touchDistance, 'duration:', touchDuration);
+
+        // Only trigger if:
+        // - Touch didn't move much (< 10px, not a scroll)
+        // - Touch was quick enough (< 500ms, not a long press)
+        // - Not already processing
+        if (touchDistance < 10 && touchDuration < 500 && !isProcessing) {
+          e.preventDefault(); // Prevent click from also firing
+          handledByTouch = true;
+          console.log('[JellyDown] touchend - executing download');
+          executeDownload();
+        }
+      }, { passive: false });
+
+      // Fallback click handler for non-touch devices and edge cases
+      elements.startDownload.addEventListener('click', (e) => {
+        console.log('[JellyDown] click event - handledByTouch:', handledByTouch);
+        // Skip if already handled by touch
+        if (handledByTouch) {
+          handledByTouch = false;
+          return;
+        }
+        e.preventDefault();
+        executeDownload();
+      });
+
+      console.log('[JellyDown] Download button handlers set (touch + click)');
     } else {
       console.error('[JellyDown] ERROR: startDownload element not found!');
     }
