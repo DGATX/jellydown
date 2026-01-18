@@ -3823,7 +3823,7 @@ h1, h2, h3 {
   .modal-body {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
-    touch-action: pan-y;
+    /* Removed touch-action: pan-y - it blocks click events on iOS */
   }
 
   .series-browser {
@@ -3855,7 +3855,7 @@ h1, h2, h3 {
     min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
+    /* Removed touch-action: pan-y - it blocks click events on iOS */
     padding-bottom: 32px; /* Extra padding so button isn't cut off */
   }
 
