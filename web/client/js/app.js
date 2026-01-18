@@ -6,6 +6,8 @@
 (function () {
   'use strict';
 
+  alert('APP.JS STARTED');
+
   // State
   let currentServerUrl = '';
   let currentServerName = '';
