@@ -3194,7 +3194,6 @@
     if (elements.startDownload) {
       let isProcessing = false;
 
-      // Handler function - exposed globally for inline onclick fallback
       async function handleTranscodeClick() {
         console.log('[JellyDown] handleTranscodeClick called');
 
@@ -3231,18 +3230,30 @@
       // Expose globally for debugging/fallback
       window.triggerTranscode = handleTranscodeClick;
 
-      // iOS: touchend with preventDefault fires before the synthetic click and suppresses it.
-      // We handle touchend for touch devices and click for desktop. passive:false required for preventDefault.
-      elements.startDownload.addEventListener('touchend', function (e) {
+      // Direct listeners on button element - more reliable on iOS than document delegation
+      const btn = elements.startDownload;
+
+      btn.addEventListener('touchstart', function(e) {
+        console.log('[JellyDown] touchstart on button');
         e.preventDefault();
+        e.stopPropagation();
         handleTranscodeClick();
       }, { passive: false });
-      elements.startDownload.addEventListener('click', function (e) {
+
+      btn.addEventListener('touchend', function(e) {
+        console.log('[JellyDown] touchend on button');
         e.preventDefault();
+        e.stopPropagation();
+      }, { passive: false });
+
+      btn.addEventListener('click', function(e) {
+        console.log('[JellyDown] click on button');
+        e.preventDefault();
+        e.stopPropagation();
         handleTranscodeClick();
       });
 
-      console.log('[JellyDown] Download button handlers set (touchend + click + global)');
+      console.log('[JellyDown] Download button handlers set (direct on element)');
     } else {
       console.error('[JellyDown] ERROR: startDownload element not found!');
     }

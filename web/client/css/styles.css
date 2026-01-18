@@ -1237,6 +1237,13 @@ h1, h2, h3 {
   padding: 16px 32px 32px;
   background: var(--bg-primary);
   border-top: 1px solid var(--bg-tertiary);
+  touch-action: manipulation;
+}
+
+/* Hits go to the button, not SVG/span — avoids iOS quirks with inline SVG */
+#start-download svg,
+#start-download span {
+  pointer-events: none;
 }
 
 .modal-footer .btn-large {
