@@ -3934,3 +3934,440 @@ h1, h2, h3 {
     padding: 14px 16px;
   }
 }
+
+/* ============================================
+   Enhanced Mobile Experience Fixes
+   ============================================ */
+
+/* Mobile library header - improved layout */
+@media (max-width: 768px) {
+  .library-header {
+    padding: 12px 16px;
+    gap: 8px;
+  }
+
+  .header-left {
+    gap: 8px;
+  }
+
+  /* Hide logo text on tablets and smaller to save space */
+  .header-logo-text {
+    display: none;
+  }
+
+  .header-right {
+    gap: 8px;
+  }
+
+  /* Make header buttons meet minimum touch target */
+  .icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Library content reduced padding on mobile */
+  .library-content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .library-header {
+    padding: 10px 12px;
+    gap: 4px;
+  }
+
+  .header-left {
+    gap: 4px;
+  }
+
+  .header-right {
+    gap: 4px;
+  }
+
+  /* Smaller logo on very small screens */
+  .logo-small {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* Compact library content */
+  .library-content {
+    padding: 12px;
+  }
+
+  /* Smaller toolbar gap */
+  .library-toolbar {
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+}
+
+/* Show movie card overlay on touch devices (since hover doesn't work) */
+@media (hover: none) and (pointer: coarse) {
+  .movie-card-overlay {
+    opacity: 1;
+    background: linear-gradient(to top, rgba(8, 8, 10, 0.9) 0%, transparent 50%);
+  }
+
+  /* Slightly smaller title area since it's always visible */
+  .movie-card-title {
+    font-size: 0.95rem;
+    -webkit-line-clamp: 1;
+  }
+
+  .movie-card-year {
+    font-size: 0.8rem;
+  }
+
+  /* Better tap feedback on movie cards */
+  .movie-card:active {
+    opacity: 0.85;
+  }
+}
+
+/* Improved modal scrolling for iOS Safari */
+@media (max-width: 768px) {
+  .modal-content {
+    /* Use flex column to ensure proper layout */
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-body {
+    /* Prevent rubber-band effect from closing modal */
+    overscroll-behavior-y: contain;
+    /* Ensure momentum scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Allow vertical scroll only */
+    touch-action: pan-y;
+    /* Ensure it can shrink to fit */
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+
+  /* Movie info section should be scrollable content */
+  .movie-info {
+    padding-bottom: 16px;
+  }
+
+  /* Ensure download options are always accessible */
+  .download-options {
+    flex-shrink: 0;
+    padding-bottom: 32px;
+  }
+
+  /* Series browser - better scroll handling */
+  .series-browser {
+    max-height: 300px;
+    overscroll-behavior-y: contain;
+  }
+
+  .series-list {
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* Small mobile - ensure critical elements are visible */
+@media (max-width: 480px) {
+  /* Reduce modal body gap for more content space */
+  .modal-body {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  /* Compact movie poster layout */
+  .movie-poster {
+    width: 80px;
+    align-self: flex-start;
+  }
+
+  /* Smaller movie title in modal */
+  .movie-title {
+    font-size: 1.1rem;
+    line-height: 1.3;
+  }
+
+  /* Compact meta spacing */
+  .movie-meta {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .movie-meta span {
+    font-size: 0.8rem;
+  }
+
+  /* Shorter overview on small screens */
+  .movie-overview {
+    -webkit-line-clamp: 3;
+    margin-bottom: 16px;
+  }
+
+  /* Hide technical badges on very small screens to save space */
+  .movie-technical {
+    display: none;
+  }
+
+  /* Compact download options */
+  .download-options h3 {
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+  }
+
+  /* Compact quality preset cards */
+  .quality-preset {
+    padding: 12px;
+    min-height: 56px;
+  }
+
+  .quality-preset-name {
+    font-size: 0.9rem;
+  }
+
+  .quality-preset-info {
+    font-size: 0.7rem;
+  }
+
+  /* Download estimate more compact */
+  .download-estimate {
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+
+  .download-estimate .size {
+    font-size: 1.25rem;
+  }
+
+  /* Audio/subtitle selects compact */
+  .audio-select select,
+  .subtitle-select select {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+
+  /* Subtitle method options stacked */
+  .subtitle-method-options {
+    grid-template-columns: 1fr;
+  }
+
+  .subtitle-method-option {
+    padding: 10px 12px;
+  }
+
+  /* Series list items more compact */
+  .series-list-item {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .series-list-item-thumb {
+    width: 50px;
+    height: 75px;
+  }
+
+  .series-list-item-thumb.episode {
+    width: 100px;
+    height: 56px;
+  }
+
+  .series-list-item-title {
+    font-size: 0.9rem;
+  }
+
+  .series-list-item-meta {
+    font-size: 0.75rem;
+  }
+
+  /* Season actions compact */
+  .season-actions {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .season-action-btn {
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
+
+  .season-action-btn span {
+    display: none;
+  }
+}
+
+/* Ensure adequate spacing around notch on landscape */
+@media (max-width: 768px) and (orientation: landscape) {
+  .modal {
+    padding: 12px max(12px, env(safe-area-inset-right)) 12px max(12px, env(safe-area-inset-left));
+  }
+
+  .modal-content {
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+  }
+
+  /* Horizontal layout for modal on landscape */
+  .modal-body {
+    flex-direction: row;
+    overflow-y: auto;
+  }
+
+  .movie-poster {
+    width: 120px;
+    flex-shrink: 0;
+  }
+}
+
+/* Downloads page mobile fixes */
+@media (max-width: 480px) {
+  /* Batch actions more compact */
+  .batch-actions {
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .batch-btn {
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  .batch-btn span {
+    display: none;
+  }
+
+  /* Download items more compact */
+  .download-item {
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+
+  .download-item-header {
+    margin-bottom: 8px;
+  }
+
+  .download-item-title {
+    font-size: 0.9rem;
+  }
+
+  .download-item-status {
+    font-size: 0.7rem;
+    padding: 3px 6px;
+  }
+
+  .download-item-stats {
+    font-size: 0.75rem;
+  }
+
+  .download-item-actions {
+    margin-top: 8px;
+    gap: 6px;
+  }
+
+  .download-item-actions button {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+  }
+}
+
+/* Settings page mobile fixes */
+@media (max-width: 480px) {
+  .settings-form {
+    padding: 0;
+  }
+
+  .settings-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .settings-label {
+    font-size: 0.85rem;
+  }
+
+  .settings-hint {
+    font-size: 0.75rem;
+  }
+
+  /* Theme and size toggles wrap */
+  .theme-toggle,
+  .size-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .theme-btn,
+  .size-btn {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    justify-content: center;
+  }
+
+  .theme-btn span,
+  .size-btn span {
+    display: none;
+  }
+
+  /* Preset editor compact */
+  #preset-editor {
+    padding: 1rem;
+  }
+
+  .preset-editor-actions {
+    flex-direction: column;
+  }
+
+  .preset-editor-actions .btn {
+    width: 100%;
+  }
+
+  /* Server info compact */
+  .server-info-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
+
+/* Fix for iOS bottom bar (home indicator) */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  @media (max-width: 768px) {
+    .modal-body {
+      padding-bottom: calc(32px + env(safe-area-inset-bottom));
+    }
+
+    #start-download {
+      margin-bottom: env(safe-area-inset-bottom);
+    }
+
+    .download-overlay .download-card {
+      padding-bottom: calc(48px + env(safe-area-inset-bottom));
+    }
+  }
+}
+
+/* Prevent text selection on interactive elements (better mobile feel) */
+@media (hover: none) and (pointer: coarse) {
+  .btn,
+  .icon-btn,
+  .movie-card,
+  .quality-preset,
+  .series-list-item,
+  .library-nav button,
+  .theme-btn,
+  .size-btn,
+  .page-tab {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Fix for 100vh on mobile browsers (address bar) */
+@supports (height: 100dvh) {
+  .screen {
+    min-height: 100dvh;
+  }
+
+  .downloads-panel {
+    height: 100dvh;
+  }
+}
