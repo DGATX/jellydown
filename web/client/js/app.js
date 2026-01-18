@@ -3227,8 +3227,10 @@
         }
       }
 
-      // Expose globally - inline HTML handlers (ontouchstart/onclick) call this
-      window.triggerTranscode = handleTranscodeClick;
+      // Expose globally - wrap in sync function for iOS inline handler compatibility
+      window.triggerTranscode = function() {
+        handleTranscodeClick();  // Call async fn without await
+      };
 
       console.log('[JellyDown] triggerTranscode exposed globally for inline handlers');
     } else {
