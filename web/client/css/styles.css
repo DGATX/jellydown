@@ -1225,7 +1225,22 @@ h1, h2, h3 {
   min-height: 0; /* Allow flexbox child to shrink below content size for scrolling */
   gap: 32px;
   padding: 32px;
+  padding-bottom: 16px; /* Reduced - footer has the button now */
   overflow-y: auto;
+}
+
+/* Fixed footer outside scroll area - critical for iOS touch */
+.modal-footer {
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+  padding: 16px 32px 32px;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--bg-tertiary);
+}
+
+.modal-footer .btn-large {
+  width: 100%;
 }
 
 .movie-poster {
@@ -3844,7 +3859,7 @@ h1, h2, h3 {
 
 /* Mobile-specific modal improvements */
 @media (max-width: 768px) {
-  /* Ensure modal is scrollable and button is visible */
+  /* Ensure modal is scrollable */
   .modal-content {
     max-height: calc(100vh - 48px);
     max-height: calc(100dvh - 48px); /* Dynamic viewport height for mobile browsers */
@@ -3855,28 +3870,20 @@ h1, h2, h3 {
     min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    /* Removed touch-action: pan-y - it blocks click events on iOS */
-    padding-bottom: 32px; /* Extra padding so button isn't cut off */
+    padding-bottom: 16px;
   }
 
-  /* Ensure download button is always visible and tappable */
-  .download-options {
-    padding-bottom: 24px;
+  /* Fixed footer with button - outside scroll area for iOS touch */
+  .modal-footer {
+    padding: 12px 16px 24px;
+    /* Safe area for devices with home indicators */
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
   }
 
   #start-download {
-    margin-top: 16px;
-    position: relative;
-    z-index: 10;
-    /* Critical for iOS - allows click to synthesize from touch */
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: rgba(212, 165, 116, 0.3);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    /* Minimum touch target size for iOS */
-    min-height: 48px;
+    /* Large touch target for mobile */
+    min-height: 52px;
+    font-size: 1rem;
   }
 
   /* Hide back button text on login screen too (consistency) */
@@ -3895,18 +3902,24 @@ h1, h2, h3 {
 /* Small mobile specific fixes */
 @media (max-width: 480px) {
   .modal {
-    padding: 12px;
+    padding: 8px;
   }
 
   .modal-content {
     border-radius: 16px;
-    max-height: calc(100vh - 24px);
-    max-height: calc(100dvh - 24px);
+    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
   }
 
   .modal-body {
     padding: 16px;
+    padding-bottom: 8px;
     gap: 16px;
+  }
+
+  .modal-footer {
+    padding: 12px 16px 20px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
   }
 
   .movie-poster {
@@ -3920,12 +3933,6 @@ h1, h2, h3 {
   .movie-overview {
     font-size: 0.9rem;
     -webkit-line-clamp: 4;
-  }
-
-  /* Ensure transcode button is prominent */
-  #start-download {
-    padding: 16px 24px;
-    font-size: 1rem;
   }
 
   /* Full width quality presets on small screens */

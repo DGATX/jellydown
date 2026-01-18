@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/styles.css?v=20">
+  <link rel="stylesheet" href="/css/styles.css?v=21">
 </head>
 <body>
   <!-- Film grain overlay -->
@@ -546,17 +546,20 @@
             </div>
 
             <div class="download-estimate" id="download-estimate"></div>
-
-            <button id="start-download" type="button" class="btn btn-primary btn-large" onclick="window.triggerTranscode && window.triggerTranscode()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7,10 12,15 17,10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              <span>Transcode</span>
-            </button>
           </div>
         </div>
+      </div>
+
+      <!-- Fixed footer outside scroll area for iOS touch compatibility -->
+      <div class="modal-footer" id="modal-footer">
+        <button id="start-download" type="button" class="btn btn-primary btn-large">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7,10 12,15 17,10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          <span>Transcode</span>
+        </button>
       </div>
     </div>
   </div>
