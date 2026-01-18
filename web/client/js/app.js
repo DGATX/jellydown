@@ -3233,6 +3233,8 @@
       // Direct listeners on button element - more reliable on iOS than document delegation
       const btn = elements.startDownload;
 
+      alert('Setting up button: ' + (btn ? 'FOUND' : 'NOT FOUND'));
+
       btn.addEventListener('touchstart', function(e) {
         alert('TOUCHSTART fired!');
         e.preventDefault();
