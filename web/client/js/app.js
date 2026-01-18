@@ -3195,7 +3195,7 @@
       let isProcessing = false;
 
       async function handleTranscodeClick() {
-        console.log('[JellyDown] handleTranscodeClick called');
+        alert('handleTranscodeClick CALLED!');
 
         const btn = elements.startDownload;
         if (!btn) {
